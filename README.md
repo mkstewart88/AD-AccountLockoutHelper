@@ -80,10 +80,10 @@ This utility requires **zero third-party modules**, **zero external installers**
 2. The script locates the built-in Microsoft .NET C# compiler (`csc.exe`) and compiles `AccountLockoutHelper.cs` into `AccountLockoutHelper.exe` in ~2 seconds.
 3. Once compilation finishes, the script asks if you want to launch `AccountLockoutHelper.exe` immediately!
 
-### Step 2: Run `AccountLockoutHelper.exe`
+### Step 2: Run or Distribute `AccountLockoutHelper.exe`
 1. Double-click the generated **`AccountLockoutHelper.exe`**.
 2. The native application launches immediately on screen.
-3. You can copy `AccountLockoutHelper.exe` to a network share, USB flash drive, or any domain-joined PC. It runs as a single, self-contained portable executable with zero dependencies or installation required!
+3. **Standalone Deployment Note:** Once compiled, **only `AccountLockoutHelper.exe` is required**. You can copy just the `.exe` file to a network share, USB flash drive, or any domain-joined PC. All source files (`.cs`), build scripts (`.cmd`), and documentation can be left behind or deleted. It runs as a single, self-contained portable executable with zero dependencies or installation required!
 
 ### Manual Compilation (Alternative)
 If you prefer to compile manually from Command Prompt or PowerShell:
