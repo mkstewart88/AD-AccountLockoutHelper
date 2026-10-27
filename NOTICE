@@ -1,0 +1,49 @@
+Account Lockout Helper & Root Cause Investigator
+Copyright (c) 2026 The Domain Lockout Helper Project Contributors
+
+This project is free and open-source software under the Apache License, Version 2.0.
+
+===============================================================================
+PAID & COMMERCIAL SOFTWARE USAGE POLICY (QUICK GITHUB SHOUT-OUT)
+===============================================================================
+
+You are completely free to download, use, inspect, fork, modify, and redistribute 
+this software and its source code.
+
+If you incorporate, bundle, or use any part of this code within any PAID or 
+COMMERCIAL software product:
+  
+  1. Simply post a quick mention / shout-out on the official GitHub repository 
+     (in GitHub Discussions or by opening an Issue) stating that you are using 
+     components of Account Lockout Helper in your product.
+  
+  2. YOU DO NOT NEED TO WAIT FOR APPROVAL OR A RESPONSE. 
+     This software is fully open-source; once you leave the shout-out on GitHub, 
+     you are free to proceed immediately.
+
+===============================================================================
+UNIVERSAL BLANKET ZERO-LIABILITY & "AS-IS" DISCLAIMER
+===============================================================================
+
+THE AUTHOR(S), CONTRIBUTOR(S), MAINTAINER(S), AND DISTRIBUTOR(S) TAKE ABSOLUTELY ZERO RESPONSIBILITY AND ZERO 
+LIABILITY FOR LITERALLY ANYTHING RESULTING FROM OR RELATING TO THIS SOFTWARE, 
+ITS CODE, OR ITS EXECUTION.
+
+THIS APPLIES TO ANY AND ALL ACTIONS, DIRECT OR INDIRECT, INTENDED OR UNINTENDED,
+THAT THIS PROGRAM COULD POSSIBLY PERFORM, ATTEMPT, TRIGGER, OR CAUSE AT ANY TIME.
+
+Whether an action involves:
+- Unlocking, locking, modifying, resetting, or altering ANY account or password;
+- Rebooting, shutting down, querying, logging off, or impacting ANY server, host,
+  workstation, database system, or domain controller;
+- Querying, scanning, connecting, or authenticating across ANY network;
+- Causing data loss, system downtime, business interruption, software crash, 
+  operating system failure, or ANY other consequence whatsoever;
+
+THE AUTHOR(S), CONTRIBUTOR(S), MAINTAINER(S), AND DISTRIBUTOR(S) CANNOT AND WILL NOT BE HELD LIABLE UNDER ANY LEGAL THEORY OR IN ANY
+JURISDICTION WHATSOEVER.
+
+This software is provided 100% "AS IS", take it or leave it. The operator and
+organization executing this tool assume ALL operational, legal, and financial risk.
+It is the sole responsibility of the owner/operator to inspect all code and know 
+exactly what they are running.

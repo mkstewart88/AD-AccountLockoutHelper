@@ -1,0 +1,39 @@
+# Windows & OS Temporary Files
+*.log
+*.tmp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# .NET & C# Compilation Artifacts
+*.exe
+AccountLockoutHelper.exe
+*.obj
+*.pdb
+*.suo
+*.user
+*.userprefs
+bin/
+obj/
+# Web & Build Environment Harness (Exclude from GitHub repository)
+# The GitHub repository is strictly for native Windows .exe execution.
+index.html
+vite.config.ts
+server.ts
+src/
+public/
+package.json
+package-lock.json
+bun.lock
+tsconfig.json
+metadata.json
+node_modules/
+dist/
+build/
+.aistudio/
+.env*
+tailwind.config.js
+postcss.config.js
+.vite/
