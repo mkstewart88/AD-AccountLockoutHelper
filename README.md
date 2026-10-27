@@ -66,9 +66,12 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
 
 ## Zero-Dependency Architecture & Portability
 
-This utility requires **zero third-party modules**, **zero external installers**, and **does NOT require RSAT** (Remote Server Administration Tools). It is completely domain-agnostic and functions out of the box on default configurations for:
-- **Windows Server 2019, 2022, and 2025**
-- **Windows 10 and Windows 11** (Domain-joined)
+### System Requirements & Permissions
+- **Environment:** Must be executed on a **domain-joined Windows machine** with network connectivity to the domain controllers.
+- **Permissions:** Must be run with **Domain Administrator** (or equivalent) credentials to successfully query Domain Controller Security Event Logs, reset user passwords, and perform account unlocks.
+- **RSAT:** Zero external RSAT installation required; uses native .NET interfaces.
+
+---
 
 ### Distribution Files
 | File | Description |

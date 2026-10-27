@@ -2,9 +2,10 @@
 DOMAIN LOCKOUT HELPER - NATIVE WINDOWS UTILITY QUICK START
 ======================================================================
 
-This is a 100% native Windows domain utility. It runs directly on any
-domain-joined Windows 10/11 or Windows Server 2016/2019/2022/2025 machine.
-Zero software, zero external modules, and zero RSAT required.
+REQUIRED ENVIRONMENT:
+- Must be executed on a domain-joined Windows machine.
+- Requires Domain Administrator (or equivalent) credentials to query security logs, unlock accounts, and reset passwords.
+- No RSAT installation required; uses native .NET interfaces.
 
 ----------------------------------------------------------------------
 HOW TO BUILD & RUN:
