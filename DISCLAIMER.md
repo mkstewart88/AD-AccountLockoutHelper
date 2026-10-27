@@ -5,7 +5,7 @@
 ### 1. ABSOLUTE & COMPREHENSIVE DISCLAIMER OF ALL LIABILITY
 Under no circumstances, under no legal theory (whether in contract, tort, negligence, strict liability, product liability, statute, or otherwise), and under no jurisdiction shall the author(s), copyright holder(s), repository owner(s), maintainer(s), publisher(s), or contributor(s) be held responsible, liable, or subject to any claims, damages, or legal actions whatsoever by you, your employer, your clients, your organization, or any third party.
 
-**THIS DISCLAIMER APPLIES TO LITERALLY ANY AND ALL ACTIONS, OPERATIONS, EVENTS, OUTCOMES, ERRORS, DEFECTS, OR CONSEQUENCES THIS SOFTWARE COULD POSSIBLY PERFORM, TRIGGER, INITIATE, OR CAUSE—WHETHER DIRECT, INDIRECT, FORESEEABLE, UNFORESEEABLE, INTENDED, UNINTENDED, OR ARISING FROM DEFECTS, BUGS, OR OPERATOR ERROR.**
+**THIS DISCLAIMER APPLIES TO ANY AND ALL ACTIONS, OPERATIONS, EVENTS, OUTCOMES, ERRORS, DEFECTS, OR CONSEQUENCES THIS SOFTWARE COULD POSSIBLY PERFORM, TRIGGER, INITIATE, OR CAUSE—WHETHER DIRECT, INDIRECT, FORESEEABLE, UNFORESEEABLE, INTENDED, UNINTENDED, OR ARISING FROM DEFECTS, BUGS, OR OPERATOR ERROR.**
 
 This includes, without any limitation whatsoever:
 * **ANY Active Directory or Identity Operation:** Any account unlock, account lockout, credential reset, password modification, attribute alteration, group change, user state modification, replication failure, directory corruption, or authentication breakdown on ANY account (standard users, service accounts, administrative accounts, VIP/executive accounts, or system principals).

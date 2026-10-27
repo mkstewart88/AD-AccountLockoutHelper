@@ -106,7 +106,7 @@ DISCLAIMER & LIMITATION OF LIABILITY:
 USE ENTIRELY AT YOUR OWN RISK. THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT
 WARRANTY OF ANY KIND.
 1. UNIVERSAL BLANKET ZERO LIABILITY: The author accepts ABSOLUTELY ZERO
-   LIABILITY OR RESPONSIBILITY WHATSOEVER for LITERALLY ANY AND ALL ACTIONS,
+   LIABILITY OR RESPONSIBILITY WHATSOEVER for ANY AND ALL ACTIONS,
    operations, errors, or outcomes this program could possibly perform, trigger,
    or cause at any time. This includes without limitation ANY password reset,
    account unlock or lockout, user attribute alteration, machine reboot or

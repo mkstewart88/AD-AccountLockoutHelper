@@ -2,6 +2,12 @@
 
 A domain-agnostic, zero-installation administrative troubleshooting tool for Enterprise Windows Active Directory environments. Built specifically for Domain Administrators, Systems Engineers, and IT Support Staff to rapidly investigate, diagnose, and remediate user account lockouts.
 
+### Application User Interface (Light & Dark Mode)
+
+| Light Mode Interface | Dark Mode Interface |
+| :---: | :---: |
+| ![Light Mode](screenshot.png) | ![Dark Mode](screenshot-dark.png) |
+
 ---
 
 ## Key Capabilities
@@ -153,7 +159,7 @@ A standard LDAP query for `(lockoutTime>=1)` will return hundreds of unlocked us
 
 **USE ENTIRELY AT YOUR OWN RISK. THIS SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY KIND.**
 
-* **Universal Blanket Disclaimer:** The author(s) and contributor(s) accept **ABSOLUTELY ZERO RESPONSIBILITY OR LIABILITY WHATSOEVER FOR LITERALLY ANY AND ALL ACTIONS, ERRORS, OPERATIONS, OR OUTCOMES THIS PROGRAM COULD POSSIBLY PERFORM, TRIGGER, OR CAUSE**.
+* **Universal Blanket Disclaimer:** The author(s) and contributor(s) accept **ABSOLUTELY ZERO RESPONSIBILITY OR LIABILITY WHATSOEVER FOR ANY AND ALL ACTIONS, ERRORS, OPERATIONS, OR OUTCOMES THIS PROGRAM COULD POSSIBLY PERFORM, TRIGGER, OR CAUSE**.
 * **Covers Any Action Whatsoever:** This applies without limitation to any password reset, account unlock, account lockout, attribute modification, server or host reboot/shutdown, session termination, process logoff, directory query, network scan, data corruption, database downtime, outage, operating system crash, or business interruption against any machine or account. Any examples mentioned are non-exhaustive illustrations only.
 * **100% Operator Responsibility:** It is the exclusive responsibility of the operator, administrator, or organization executing this code to review all scripts and source files prior to execution. You assume 100% of all legal, technical, and operational risk.
 * **No Maintenance or Support SLA:** This utility is released on a strict "take it or leave it" basis. The author has zero obligation to answer inquiries, patch bugs, or maintain the project.
