@@ -26,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - One-click domain-wide account unlock clearing the `lockoutTime` attribute.
   - Password reset prompt supporting forced password change at next logon.
 - **Portability & Deployment:**
-  - Automated batch build script (`Build-Executable.cmd`) to compile `AccountLockoutHelper.cs` into `AccountLockoutHelper.exe` using the built-in Windows .NET C# compiler (`csc.exe`).
+  - Automated batch build script (`Build-Executable.cmd`) to compile `Program-Code.cs` into `AccountLockoutHelper.exe` using the built-in Windows .NET C# compiler (`csc.exe`).
 - **Account Unlock Accountability (Event ID 4767):**
   - Scans Domain Controller Security logs for Event ID 4767 ("A user account was unlocked").
   - Identifies who performed prior unlocks (`SubjectUserName`), the reporting Domain Controller, and the exact timestamp.
@@ -36,7 +36,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Step-by-step guidance for analyzing NPS Event ID 6273 to extract client hardware MAC addresses (`Calling-Station-Id`) and Access Point locations (`Client-Friendly-Name`).
 - **Streamlined Single-Build Architecture:**
   - Standardized on a single, one-click build script (`Build-Executable.cmd`) with flat syntax, no subshell parsing hazards, and automatic compiler discovery.
-  - Standalone portable C# source code (`AccountLockoutHelper.cs`) and native PowerShell 5.1/7+ counterpart (`AccountLockoutHelper.ps1`).
+  - Dedicated standalone C# source code (`Program-Code.cs`) compiling directly to native executable (`AccountLockoutHelper.exe`).
 
 ### Security & Hardening
 - Complete removal of broad directory sweeps (`objectCategory=computer` LDAP queries) to ensure 100% compliance with enterprise EDR solutions (SentinelOne, CrowdStrike, Defender).

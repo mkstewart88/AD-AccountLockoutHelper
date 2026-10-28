@@ -76,9 +76,8 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
 ### Distribution Files
 | File | Description |
 | :--- | :--- |
-| **`Build-Executable.cmd`** | The single one-click compiler script that compiles `AccountLockoutHelper.cs` into `AccountLockoutHelper.exe` using the built-in Windows `.NET` C# compiler (`csc.exe`). |
-| **`AccountLockoutHelper.cs`** | Pure C# source code utilizing standard .NET Framework libraries (`System.DirectoryServices`, `System.Windows.Forms`). |
-| **`AccountLockoutHelper.ps1`** | Native PowerShell 5.1 & 7+ Windows Forms GUI counterpart for zero-compile environments. |
+| **`Build-Executable.cmd`** | The single one-click compiler script that compiles `Program-Code.cs` into `AccountLockoutHelper.exe` using the built-in Windows `.NET` C# compiler (`csc.exe`). |
+| **`Program-Code.cs`** | Pure C# source code utilizing standard .NET Framework libraries (`System.DirectoryServices`, `System.Windows.Forms`). |
 
 ---
 
@@ -86,7 +85,7 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
 
 ### Step 1: Run `Build-Executable.cmd` to Compile
 1. Double-click **`Build-Executable.cmd`** in the repository directory.
-2. The script locates the built-in Microsoft .NET C# compiler (`csc.exe`) and compiles `AccountLockoutHelper.cs` into `AccountLockoutHelper.exe` in ~2 seconds.
+2. The script locates the built-in Microsoft .NET C# compiler (`csc.exe`) and compiles `Program-Code.cs` into `AccountLockoutHelper.exe` in ~2 seconds.
 3. Once compilation finishes, the script asks if you want to launch `AccountLockoutHelper.exe` immediately!
 
 ### Step 2: Run or Distribute `AccountLockoutHelper.exe`
@@ -97,7 +96,7 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
 ### Manual Compilation (Alternative)
 If you prefer to compile manually from Command Prompt or PowerShell:
 ```cmd
-%SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /out:AccountLockoutHelper.exe AccountLockoutHelper.cs
+%SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /out:AccountLockoutHelper.exe Program-Code.cs
 ```
 
 ---

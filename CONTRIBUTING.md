@@ -13,7 +13,7 @@ This utility is designed for mission-critical enterprise and educational Active 
 - Always use native .NET Framework directory services (`System.DirectoryServices`, `System.DirectoryServices.AccountManagement`) and native Windows Event Log readers (`System.Diagnostics.Eventing.Reader`).
 
 ### 2. C# 5 / .NET Framework 4.x Backward Compatibility
-- `AccountLockoutHelper.cs` is compiled using the Windows built-in compiler (`csc.exe` located in `%SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe`).
+- `Program-Code.cs` is compiled using the Windows built-in compiler (`csc.exe` located in `%SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe`).
 - **Do not use C# 6+ language features**:
   - Do NOT use string interpolation (`$"..."`). Use `string.Format("...", ...)`.
   - Do NOT use the null-conditional operator (`?.`). Use explicit `if (obj != null)` checks.
@@ -31,11 +31,11 @@ This utility is designed for mission-critical enterprise and educational Active 
 
 ## Development Workflow
 
-### Compiling `AccountLockoutHelper.exe` from Source (`AccountLockoutHelper.cs`)
+### Compiling `AccountLockoutHelper.exe` from Source (`Program-Code.cs`)
 1. Double-click `Build-Executable.cmd` to compile the source code automatically using the built-in Microsoft .NET C# compiler (`csc.exe`).
 2. Alternatively, run the compiler manually from Command Prompt:
 ```cmd
-%SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /out:AccountLockoutHelper.exe AccountLockoutHelper.cs
+%SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /out:AccountLockoutHelper.exe Program-Code.cs
 ```
 3. Verify that compilation completes with **0 errors and 0 warnings**.
 

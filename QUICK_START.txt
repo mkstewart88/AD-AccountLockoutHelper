@@ -13,7 +13,7 @@ HOW TO BUILD & RUN:
 
 STEP 1: RUN "Build-Executable.cmd" (DOUBLE-CLICK)
    - "Build-Executable.cmd" is the single one-click compiler script.
-   - It compiles AccountLockoutHelper.cs into AccountLockoutHelper.exe in ~2 seconds.
+   - It compiles Program-Code.cs into AccountLockoutHelper.exe in ~2 seconds.
    - Uses the built-in Windows Microsoft .NET C# compiler (csc.exe).
    - Zero software download, zero external modules, and zero installation required.
 
@@ -23,11 +23,11 @@ STEP 2: RUN OR DISTRIBUTE "AccountLockoutHelper.exe"
    - Connects to Active Directory, queries domain lockout policies, detects
      domain controllers, and scans Security logs for Event 4740 (lockouts) and Event 4767 (unlocks).
    - Shows locked accounts, root causes, caller PCs/IPs, who performed unlocks, and QUSER sessions.
-   - STANDALONE DEPLOYMENT NOTE: Once compiled, ONLY "AccountLockoutHelper.exe" is needed. You can copy just the .exe file to a network share, USB flash drive, or any domain-joined PC. All source code (.cs), build scripts (.cmd), and documentation can be left behind or deleted.
+   - STANDALONE DEPLOYMENT NOTE: Once compiled, ONLY "AccountLockoutHelper.exe" is needed. You can copy just the .exe file to a network share, USB flash drive, or any domain-joined PC. All source code (Program-Code.cs), build scripts (Build-Executable.cmd), and documentation can be left behind or deleted.
 
 OPTIONAL: MANUAL C# COMPILATION
    - Open Command Prompt as Administrator and run:
-     %SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /out:AccountLockoutHelper.exe AccountLockoutHelper.cs
+     %SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /out:AccountLockoutHelper.exe Program-Code.cs
 
 ----------------------------------------------------------------------
 BUILT-IN ZERO-DEPENDENCY FORENSIC CAPABILITIES:

@@ -19,15 +19,15 @@ if not defined CSC if exist "C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc
 if not defined CSC if exist "C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe" set "CSC=C:\Windows\Microsoft.NET\Framework\v4.0.30319\csc.exe"
 
 if not defined CSC goto :NO_CSC
-if not exist "%~dp0AccountLockoutHelper.cs" goto :NO_SOURCE
+if not exist "%~dp0Program-Code.cs" goto :NO_SOURCE
 
 echo Found C# Compiler:
 echo %CSC%
 echo.
-echo Compiling AccountLockoutHelper.cs into AccountLockoutHelper.exe...
+echo Compiling Program-Code.cs into AccountLockoutHelper.exe...
 echo.
 
-"%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ /out:"%~dp0AccountLockoutHelper.exe" /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.DirectoryServices.dll /r:System.DirectoryServices.AccountManagement.dll "%~dp0AccountLockoutHelper.cs"
+"%CSC%" /nologo /target:winexe /platform:anycpu /optimize+ /out:"%~dp0AccountLockoutHelper.exe" /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.DirectoryServices.dll /r:System.DirectoryServices.AccountManagement.dll "%~dp0Program-Code.cs"
 
 if %ERRORLEVEL% NEQ 0 goto :BUILD_FAILED
 
@@ -60,7 +60,7 @@ exit /b 1
 
 :NO_SOURCE
 echo.
-echo [ERROR] AccountLockoutHelper.cs source file was not found in:
+echo [ERROR] Program-Code.cs source file was not found in:
 echo %~dp0
 echo.
 pause

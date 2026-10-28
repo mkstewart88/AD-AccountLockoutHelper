@@ -16,7 +16,7 @@ STEP 1: RUN "Build-Executable.cmd" (DOUBLE-CLICK)
 -------------------------------------------------------------------
 1. Double-click "Build-Executable.cmd" in this folder.
 2. The script locates the built-in Microsoft .NET Framework C# compiler (csc.exe)
-   and compiles "AccountLockoutHelper.cs" into "AccountLockoutHelper.exe" (~2s).
+   and compiles "Program-Code.cs" into "AccountLockoutHelper.exe" (~2s).
 3. Prompts you to launch the compiled application immediately!
 
 STEP 2: RUN "AccountLockoutHelper.exe"
@@ -33,7 +33,7 @@ MANUAL C# COMPILATION
 If you want to compile or modify the source code yourself on any Windows machine:
 1. Open Command Prompt as Administrator.
 2. Run:
-   %SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /out:AccountLockoutHelper.exe AccountLockoutHelper.cs
+   %SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe /target:winexe /out:AccountLockoutHelper.exe Program-Code.cs
 
 
 ================================================================================
@@ -82,10 +82,10 @@ BUILT-IN FORENSIC CAPABILITIES:
 WHAT EACH FILE IS FOR:
 ================================================================================
 - Build-Executable.cmd   --> Batch compiler script (Double-click to compile .exe)
-- AccountLockoutHelper.cs  --> Pure C# source code utilizing standard .NET Framework
-- README.md                # Full documentation and incident troubleshooting guide
-- README.txt               # Plain-text documentation
-- QUICK_START.txt          # Plain-text quick start cheat sheet
+- Program-Code.cs        --> Pure C# source code utilizing standard .NET Framework
+- README.md              # Full documentation and incident troubleshooting guide
+- README.txt             # Plain-text documentation
+- QUICK_START.txt        # Plain-text quick start cheat sheet
 
 ================================================================================
 SECURITY & EDR / SENTINELONE COMPLIANCE:

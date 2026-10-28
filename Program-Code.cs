@@ -34,7 +34,7 @@
 //      (e.g., [WI-FI / RADIUS], [SHARED PC SESSION], [CREDENTIAL MANAGER]).
 // 3. COMPILATION COMMAND:
 //    csc.exe /target:winexe /platform:anycpu /optimize+ /out:AccountLockoutHelper.exe
-//    AccountLockoutHelper.cs /reference:System.dll,System.Core.dll,System.DirectoryServices.dll,
+//    Program-Code.cs /reference:System.dll,System.Core.dll,System.DirectoryServices.dll,
 //    System.DirectoryServices.AccountManagement.dll,System.Windows.Forms.dll,System.Drawing.dll
 // =============================================================================
 
