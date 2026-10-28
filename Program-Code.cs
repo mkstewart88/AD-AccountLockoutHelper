@@ -5,9 +5,9 @@
 // See NOTICE for commercial use acknowledgement terms.
 //
 // DISCLAIMER: USE ENTIRELY AT YOUR OWN RISK. PROVIDED "AS IS" WITHOUT WARRANTY.
-// The author assumes ABSOLUTELY ZERO LIABILITY AND ZERO RESPONSIBILITY FOR LITERALLY
-// ANY ACTION, OPERATION, ERROR, OR OUTCOME THIS PROGRAM COULD POSSIBLY PERFORM OR CAUSE.
-// The operator assumes 100% of all risk. Sole responsibility of the operator to review all code.
+// The author assumes zero liability and zero responsibility for any action,
+// operation, error, or outcome this program could perform or cause.
+// The operator assumes all risk. It is the sole responsibility of the operator to review all code.
 
 //
 // COMPILER TARGET & COMPATIBILITY SPECIFICATION:
@@ -141,10 +141,15 @@ namespace DomainLockoutHelper
         public int EventCount { get; set; }
         public DateTime? LatestEvent { get; set; }
         public string EventTypes { get; set; }
+        public string ResolvedHostname { get; set; }
 
         public override string ToString()
         {
             string timeStr = LatestEvent.HasValue ? LatestEvent.Value.ToString("yyyy-MM-dd HH:mm:ss") : "No timestamp";
+            if (!string.IsNullOrEmpty(ResolvedHostname) && !ResolvedHostname.StartsWith("("))
+            {
+                return string.Format("{0} -> {1}   |   {2} event(s)   |   Latest: {3}", ComputerName, ResolvedHostname, EventCount, timeStr);
+            }
             return string.Format("{0}   |   {1} event(s)   |   Latest: {2}", ComputerName, EventCount, timeStr);
         }
     }
@@ -165,6 +170,7 @@ namespace DomainLockoutHelper
         private List<UserRecord> _currentLockedUsers = new List<UserRecord>();
         private List<UserRecord> _historicalUsers = new List<UserRecord>();
         private List<string> _discoveredDCs = new List<string>();
+        private string _domainName = null;
         private UserRecord _selectedUser = null;
         private string _selectedComputer = null;
         private QUserSessionItem _selectedSession = null;
@@ -178,8 +184,9 @@ namespace DomainLockoutHelper
         private Button _btnCopyTicket;
         private Button _btnRefreshLockouts;
 
-        // UI Controls - Column 2: Caller Computers
+        // UI Controls - Column 2: Caller Computers & Notable IPs
         private ListBox _lstCallerComputers;
+        private ListBox _lstNotableIPs;
         private RichTextBox _rtbComputerDetails;
         private Button _btnRefreshComputer;
         private Button _btnCopyComputer;
@@ -453,11 +460,11 @@ namespace DomainLockoutHelper
             workLayout.Controls.Add(grpAccounts, 0, 0);
 
             // =============================================================
-            // COLUMN 2: CALLER COMPUTERS (PROMINENT LIST + COMPUTER DETAILS)
+            // COLUMN 2: CALLER COMPUTERS & NOTABLE CLIENT IPS
             // =============================================================
             GroupBox grpComputers = new GroupBox();
             _grpComputers = grpComputers;
-            grpComputers.Text = " Caller Computers ";
+            grpComputers.Text = " Caller Computers & Notable IPs ";
             grpComputers.Dock = DockStyle.Fill;
             grpComputers.Font = new Font("Segoe UI Semibold", 9.5F);
             grpComputers.BackColor = Color.White;
@@ -466,25 +473,45 @@ namespace DomainLockoutHelper
             TableLayoutPanel col2Layout = new TableLayoutPanel();
             col2Layout.Dock = DockStyle.Fill;
             col2Layout.ColumnCount = 1;
-            col2Layout.RowCount = 4;
-            col2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 35F)); // Caller Computer List (PROMINENT!)
-            col2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 65F)); // Computer Details
+            col2Layout.RowCount = 5;
+            col2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 20F)); // Caller Computers
+            col2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 20F)); // Notable IPs
+            col2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 60F)); // Computer Details
             col2Layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F)); // Actions (Refresh, Copy)
             col2Layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F)); // Reboot Button
             col2Layout.Padding = new Padding(4);
 
             // 1. Caller Computers ListBox
+            GroupBox grpCallerComps = new GroupBox();
+            grpCallerComps.Text = "Caller Computers (Workstations / Servers)";
+            grpCallerComps.Dock = DockStyle.Fill;
+            grpCallerComps.Font = new Font("Segoe UI Semibold", 8.5F);
             _lstCallerComputers = new ListBox();
             _lstCallerComputers.Dock = DockStyle.Fill;
-            _lstCallerComputers.Font = new Font("Segoe UI", 10F);
+            _lstCallerComputers.Font = new Font("Segoe UI", 9.5F);
             _lstCallerComputers.IntegralHeight = false;
             _lstCallerComputers.HorizontalScrollbar = true;
             _lstCallerComputers.SelectedIndexChanged += CallerSelectionChanged;
-            col2Layout.Controls.Add(_lstCallerComputers, 0, 0);
+            grpCallerComps.Controls.Add(_lstCallerComputers);
+            col2Layout.Controls.Add(grpCallerComps, 0, 0);
 
-            // 2. Computer Details
+            // 2. Notable IPs ListBox
+            GroupBox grpNotableIPs = new GroupBox();
+            grpNotableIPs.Text = "Notable Client IPs (Event Log Source IPs)";
+            grpNotableIPs.Dock = DockStyle.Fill;
+            grpNotableIPs.Font = new Font("Segoe UI Semibold", 8.5F);
+            _lstNotableIPs = new ListBox();
+            _lstNotableIPs.Dock = DockStyle.Fill;
+            _lstNotableIPs.Font = new Font("Segoe UI", 9.5F);
+            _lstNotableIPs.IntegralHeight = false;
+            _lstNotableIPs.HorizontalScrollbar = true;
+            _lstNotableIPs.SelectedIndexChanged += NotableIpSelectionChanged;
+            grpNotableIPs.Controls.Add(_lstNotableIPs);
+            col2Layout.Controls.Add(grpNotableIPs, 0, 1);
+
+            // 3. Computer Details
             GroupBox grpCompDetails = new GroupBox();
-            grpCompDetails.Text = "Computer Details & Active Directory Record";
+            grpCompDetails.Text = "Target Details & DNS / AD Record";
             grpCompDetails.Dock = DockStyle.Fill;
             grpCompDetails.Font = new Font("Segoe UI", 9F);
             _rtbComputerDetails = new RichTextBox();
@@ -494,9 +521,9 @@ namespace DomainLockoutHelper
             _rtbComputerDetails.Font = new Font("Segoe UI", 9F);
             _rtbComputerDetails.ScrollBars = RichTextBoxScrollBars.Vertical;
             _rtbComputerDetails.WordWrap = true;
-            _rtbComputerDetails.Text = "Select a caller computer above to inspect its Active Directory record and session summary.";
+            _rtbComputerDetails.Text = "Select a caller computer or notable IP above to inspect its Active Directory record and network status.";
             grpCompDetails.Controls.Add(_rtbComputerDetails);
-            col2Layout.Controls.Add(grpCompDetails, 0, 1);
+            col2Layout.Controls.Add(grpCompDetails, 0, 2);
 
             // 3. Computer Action buttons
             FlowLayoutPanel compBtnLayout = new FlowLayoutPanel();
@@ -1263,6 +1290,7 @@ namespace DomainLockoutHelper
                     _btnRefreshLockouts.Enabled = true;
                     _progressBar.Visible = false;
                     _discoveredDCs = dcs;
+                    _domainName = domainName;
 
                     _domainInfoLabel.Text = string.Format("Domain: {0} ({1} DCs online)", domainName, dcs.Count);
 
@@ -1355,13 +1383,13 @@ namespace DomainLockoutHelper
         {
             if (user == null) return;
 
-            // Populate Caller Computers & Client IPs (Column 2)
+            // 1. Populate Caller Computers (Strictly Workstations / Servers)
             _lstCallerComputers.BeginUpdate();
             _lstCallerComputers.Items.Clear();
 
             Dictionary<string, CallerComputerItem> callerMap = new Dictionary<string, CallerComputerItem>(StringComparer.OrdinalIgnoreCase);
 
-            if (!string.IsNullOrEmpty(user.LatestCaller))
+            if (!string.IsNullOrEmpty(user.LatestCaller) && !Regex.IsMatch(user.LatestCaller, @"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$"))
             {
                 callerMap[user.LatestCaller] = new CallerComputerItem
                 {
@@ -1374,7 +1402,7 @@ namespace DomainLockoutHelper
             foreach (var evt in user.Events)
             {
                 string target = !string.IsNullOrEmpty(evt.CallerComputer) ? evt.CallerComputer : null;
-                if (!string.IsNullOrEmpty(target))
+                if (!string.IsNullOrEmpty(target) && !Regex.IsMatch(target, @"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$"))
                 {
                     if (!callerMap.ContainsKey(target))
                     {
@@ -1391,25 +1419,6 @@ namespace DomainLockoutHelper
                         callerMap[target].LatestEvent = evt.TimeCreated;
                     }
                 }
-
-                if (!string.IsNullOrEmpty(evt.SourceIp) && !string.Equals(evt.SourceIp, target, StringComparison.OrdinalIgnoreCase))
-                {
-                    string ipTarget = evt.SourceIp;
-                    if (!callerMap.ContainsKey(ipTarget))
-                    {
-                        callerMap[ipTarget] = new CallerComputerItem
-                        {
-                            ComputerName = ipTarget,
-                            EventCount = 0,
-                            LatestEvent = evt.TimeCreated
-                        };
-                    }
-                    callerMap[ipTarget].EventCount++;
-                    if (callerMap[ipTarget].LatestEvent == null || evt.TimeCreated > callerMap[ipTarget].LatestEvent)
-                    {
-                        callerMap[ipTarget].LatestEvent = evt.TimeCreated;
-                    }
-                }
             }
 
             foreach (var item in callerMap.Values)
@@ -1418,17 +1427,88 @@ namespace DomainLockoutHelper
             }
             _lstCallerComputers.EndUpdate();
 
+            // 2. Populate Notable Client IPs (Strictly Event Log Source IPs)
+            _lstNotableIPs.BeginUpdate();
+            _lstNotableIPs.Items.Clear();
+
+            Dictionary<string, CallerComputerItem> ipMap = new Dictionary<string, CallerComputerItem>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var evt in user.Events)
+            {
+                if (!string.IsNullOrEmpty(evt.SourceIp))
+                {
+                    string ipTarget = evt.SourceIp;
+                    if (!ipMap.ContainsKey(ipTarget))
+                    {
+                        ipMap[ipTarget] = new CallerComputerItem
+                        {
+                            ComputerName = ipTarget,
+                            EventCount = 0,
+                            LatestEvent = evt.TimeCreated
+                        };
+                    }
+                    ipMap[ipTarget].EventCount++;
+                    if (ipMap[ipTarget].LatestEvent == null || evt.TimeCreated > ipMap[ipTarget].LatestEvent)
+                    {
+                        ipMap[ipTarget].LatestEvent = evt.TimeCreated;
+                    }
+                }
+            }
+
+            List<CallerComputerItem> ipItems = new List<CallerComputerItem>(ipMap.Values);
+            foreach (var item in ipItems)
+            {
+                _lstNotableIPs.Items.Add(item);
+            }
+            _lstNotableIPs.EndUpdate();
+
+            // Background Reverse DNS resolution for Notable IPs
+            ThreadPool.QueueUserWorkItem(state =>
+            {
+                foreach (var item in ipItems)
+                {
+                    try
+                    {
+                        IPAddress addr;
+                        if (IPAddress.TryParse(item.ComputerName, out addr))
+                        {
+                            IPHostEntry entry = Dns.GetHostEntry(addr);
+                            if (entry != null && !string.IsNullOrEmpty(entry.HostName))
+                            {
+                                item.ResolvedHostname = entry.HostName;
+                            }
+                        }
+                    }
+                    catch { }
+                }
+
+                try
+                {
+                    this.BeginInvoke((Action)(() =>
+                    {
+                        _lstNotableIPs.Refresh();
+                    }));
+                }
+                catch { }
+            });
+
             if (_lstCallerComputers.Items.Count > 0)
             {
                 _lstCallerComputers.SelectedIndex = 0;
+            }
+            else if (_lstNotableIPs.Items.Count > 0)
+            {
+                _lstNotableIPs.SelectedIndex = 0;
             }
             else
             {
                 _rtbComputerDetails.Text = "No caller computers or client IP addresses recorded for this account.\r\n(Some authentications like NTLM or direct LDAP queries may omit workstation names).";
             }
 
-            // Render Account Details & Root Cause Forensics (Column 1)
-            RenderAccountDetails(user, callerMap.Keys);
+            HashSet<string> combinedKeys = new HashSet<string>(callerMap.Keys);
+            foreach (var k in ipMap.Keys) combinedKeys.Add(k);
+
+            RenderAccountDetails(user, combinedKeys);
         }
 
         private void FetchTargetedForensicEvents(UserRecord user)
@@ -1444,11 +1524,22 @@ namespace DomainLockoutHelper
             {
                 try
                 {
-                    // Targeted query strictly for this single user: Logon Failure (4625), Kerberos Pre-Auth Failure (4771), Logon Success (4624)
+                    // Targeted query strictly for this single user: Logon Failure (4625), Kerberos Pre-Auth (4771), Logon Success (4624), Account Lockout (4740), NTLM Validation (4776), Account Unlocked (4767), Admin Password Reset (4724)
                     // Bounded to recent 7 days (604800000 ms) and limited to 50 records per DC
+                    string dom = !string.IsNullOrEmpty(_domainName) ? _domainName : Environment.GetEnvironmentVariable("USERDNSDOMAIN");
+                    string userTargetFilter;
+                    if (!string.IsNullOrEmpty(dom) && !dom.Equals("Unknown", StringComparison.OrdinalIgnoreCase))
+                    {
+                        userTargetFilter = string.Format("(*[EventData[Data[@Name='TargetUserName']='{0}']] or *[EventData[Data[@Name='TargetUserName']='{0}@{1}']] or *[EventData[Data[@Name='SamAccountName']='{0}']])", sam, dom);
+                    }
+                    else
+                    {
+                        userTargetFilter = string.Format("(*[EventData[Data[@Name='TargetUserName']='{0}']] or *[EventData[Data[@Name='SamAccountName']='{0}']])", sam);
+                    }
+
                     string xpath = string.Format(
-                        "*[System[((EventID=4625 or EventID=4771 or EventID=4624)) and TimeCreated[timediff(@SystemTime) <= 604800000]]] and (*[EventData[Data[@Name='TargetUserName']='{0}']] or *[EventData[Data[@Name='TargetUserName']='{0}@{1}']])",
-                        sam, _domainName ?? "");
+                        "*[System[((EventID=4625 or EventID=4771 or EventID=4624 or EventID=4740 or EventID=4776 or EventID=4767 or EventID=4724)) and TimeCreated[timediff(@SystemTime) <= 604800000]]] and {0}",
+                        userTargetFilter);
 
                     EventLogQuery query = new EventLogQuery("Security", PathType.LogName, xpath);
                     query.Session = new EventLogSession(dc);
@@ -1465,6 +1556,7 @@ namespace DomainLockoutHelper
                             string sourceIp = null;
                             string logonType = null;
                             string subStatus = null;
+                            string unlockedByVal = null;
 
                             if (id == 4625)
                             {
@@ -1487,6 +1579,27 @@ namespace DomainLockoutHelper
                                 sourceIp = GetNamedEventData(record, "IpAddress");
                                 logonType = GetNamedEventData(record, "LogonType");
                             }
+                            else if (id == 4740)
+                            {
+                                caller = GetNamedEventData(record, "Workstation");
+                                subStatus = "Account Locked Out";
+                            }
+                            else if (id == 4776)
+                            {
+                                caller = GetNamedEventData(record, "Workstation");
+                                subStatus = GetNamedEventData(record, "Status");
+                                if (string.IsNullOrEmpty(subStatus)) subStatus = "0xC000006A (Bad Password)";
+                            }
+                            else if (id == 4767)
+                            {
+                                unlockedByVal = GetNamedEventData(record, "SubjectUserName");
+                                subStatus = "Account Unlocked";
+                            }
+                            else if (id == 4724)
+                            {
+                                unlockedByVal = GetNamedEventData(record, "SubjectUserName");
+                                subStatus = "Administrator Password Reset";
+                            }
 
                             if (!string.IsNullOrEmpty(sourceIp))
                             {
@@ -1507,6 +1620,7 @@ namespace DomainLockoutHelper
                                 SourceIp = sourceIp,
                                 LogonType = DecodeLogonType(logonType),
                                 StatusOrCode = DecodeSubStatus(subStatus),
+                                UnlockedBy = unlockedByVal,
                                 DomainController = dc,
                                 RecordId = record.RecordId ?? 0
                             });
@@ -1683,16 +1797,21 @@ namespace DomainLockoutHelper
                 sb.AppendLine("Last Unlocked By:         (No 4767 unlock events in cached Security log)");
             }
 
-            // Post-Unlock Logon Status (correlating last successful logon with latest lockout event)
-            if (latestLockout != null && u.LastLogonTimestamp.HasValue)
+            // Post-Unlock Logon Status (correlating security event log and LDAP last logon with latest lockout event)
+            if (latestLockout != null)
             {
-                if (u.LastLogonTimestamp.Value > latestLockout.TimeCreated)
+                LockoutEventItem postUnlockEvt = u.Events.Find(ev => ev.EventId == 4624 && ev.TimeCreated > latestLockout.TimeCreated);
+                if (postUnlockEvt != null)
+                {
+                    sb.AppendLine(string.Format("Post-Unlock Logon:        YES - Successful logon event recorded at {0:yyyy-MM-dd HH:mm:ss} (Security Log Event 4624)", postUnlockEvt.TimeCreated));
+                }
+                else if (u.LastLogonTimestamp.HasValue && u.LastLogonTimestamp.Value > latestLockout.TimeCreated)
                 {
                     sb.AppendLine(string.Format("Post-Unlock Logon (AD):   YES - User logged on at {0:yyyy-MM-dd HH:mm:ss} (Active Directory confirmed)", u.LastLogonTimestamp.Value));
                 }
                 else
                 {
-                    sb.AppendLine(string.Format("Post-Unlock Logon (AD):   NO - No successful domain logons recorded since latest lockout ({0:yyyy-MM-dd HH:mm:ss})", latestLockout.TimeCreated));
+                    sb.AppendLine(string.Format("Post-Unlock Logon:        NO - No successful domain logons recorded since latest lockout ({0:yyyy-MM-dd HH:mm:ss})", latestLockout.TimeCreated));
                 }
             }
 
@@ -1795,6 +1914,23 @@ namespace DomainLockoutHelper
                             !string.IsNullOrEmpty(evt.StatusOrCode) ? evt.StatusOrCode : "0x18 (Pre-Auth Failed)",
                             evt.DomainController));
                     }
+                    else if (evt.EventId == 4776)
+                    {
+                        string wsInfo = !string.IsNullOrEmpty(evt.CallerComputer) ? evt.CallerComputer : "(Workstation not recorded)";
+                        sb.AppendLine(string.Format("{0:yyyy-MM-dd HH:mm:ss} | Event 4776 (NTLM VALIDATION)    | Workstation: {1} | Status: {2} | DC: {3}",
+                            evt.TimeCreated,
+                            wsInfo,
+                            !string.IsNullOrEmpty(evt.StatusOrCode) ? evt.StatusOrCode : "Validated",
+                            evt.DomainController));
+                    }
+                    else if (evt.EventId == 4724)
+                    {
+                        sb.AppendLine(string.Format("{0:yyyy-MM-dd HH:mm:ss} | Event 4724 (ADMIN PASSWORD RESET) | Admin: {1} | DC: {2} | Record: {3}",
+                            evt.TimeCreated,
+                            string.IsNullOrEmpty(evt.UnlockedBy) ? "(Administrator not recorded)" : evt.UnlockedBy,
+                            evt.DomainController,
+                            evt.RecordId));
+                    }
                     else if (evt.EventId == 4624)
                     {
                         string ipInfo = !string.IsNullOrEmpty(evt.SourceIp) ? evt.SourceIp : "(IP not recorded)";
@@ -1816,33 +1952,58 @@ namespace DomainLockoutHelper
         // -------------------------------------------------------------
         // CALLER COMPUTER SELECTION & QUERY COMPUTER AD + QUSER
         // -------------------------------------------------------------
+        // -------------------------------------------------------------
+        // CALLER COMPUTER & NOTABLE IP SELECTION
+        // -------------------------------------------------------------
         private void CallerSelectionChanged(object sender, EventArgs e)
         {
-            if (_lstCallerComputers.SelectedItem == null)
+            if (_lstCallerComputers != null && _lstCallerComputers.SelectedItem != null)
             {
-                _selectedComputer = null;
+                if (_lstNotableIPs != null && _lstNotableIPs.SelectedIndex != -1)
+                {
+                    _lstNotableIPs.SelectedIndexChanged -= NotableIpSelectionChanged;
+                    _lstNotableIPs.ClearSelected();
+                    _lstNotableIPs.SelectedIndexChanged += NotableIpSelectionChanged;
+                }
+
+                CallerComputerItem compItem = _lstCallerComputers.SelectedItem as CallerComputerItem;
+                if (compItem == null) return;
+
+                _selectedComputer = compItem.ComputerName;
+                _btnRebootComputer.Enabled = true;
+
+                RenderComputerAdDetails(_selectedComputer);
+                QueryQUserAsync(_selectedComputer);
+            }
+        }
+
+        private void NotableIpSelectionChanged(object sender, EventArgs e)
+        {
+            if (_lstNotableIPs != null && _lstNotableIPs.SelectedItem != null)
+            {
+                if (_lstCallerComputers != null && _lstCallerComputers.SelectedIndex != -1)
+                {
+                    _lstCallerComputers.SelectedIndexChanged -= CallerSelectionChanged;
+                    _lstCallerComputers.ClearSelected();
+                    _lstCallerComputers.SelectedIndexChanged += CallerSelectionChanged;
+                }
+
+                CallerComputerItem ipItem = _lstNotableIPs.SelectedItem as CallerComputerItem;
+                if (ipItem == null) return;
+
+                _selectedComputer = ipItem.ComputerName;
                 _btnRebootComputer.Enabled = false;
                 _lvSessions.Items.Clear();
                 _btnLogoffUser.Enabled = false;
-                return;
+
+                RenderComputerAdDetails(_selectedComputer);
+                _statusLabel.Text = string.Format("Selected Notable IP {0}. QUSER remote session query skipped for IP address.", ipItem.ComputerName);
             }
-
-            CallerComputerItem compItem = _lstCallerComputers.SelectedItem as CallerComputerItem;
-            if (compItem == null) return;
-
-            _selectedComputer = compItem.ComputerName;
-            _btnRebootComputer.Enabled = !_selectedComputer.StartsWith("IP: ", StringComparison.OrdinalIgnoreCase);
-
-            // Render Computer AD Details & Network Ping
-            RenderComputerAdDetails(_selectedComputer);
-
-            // Automatically Query QUSER Sessions (with 10-second timeout)
-            QueryQUserAsync(_selectedComputer);
         }
 
         private void RenderComputerAdDetails(string computerName)
         {
-            _rtbComputerDetails.Text = string.Format("Querying network status and Active Directory record for '{0}'...", computerName);
+            _rtbComputerDetails.Text = string.Format("Querying network status, DNS, and reverse PTR lookup for '{0}'...", computerName);
 
             ThreadPool.QueueUserWorkItem(state =>
             {
@@ -1853,25 +2014,60 @@ namespace DomainLockoutHelper
                     if (targetHost.StartsWith("IP: ", StringComparison.OrdinalIgnoreCase))
                         targetHost = targetHost.Substring(4).Trim();
 
-                    string shortName = targetHost.Contains(".") ? targetHost.Split('.')[0] : targetHost;
+                    string resolvedHostname = "(Resolving reverse DNS...)";
                     string resolvedIp = "(Resolving...)";
                     string pingStatus = "Unknown";
+                    bool isIpInput = Regex.IsMatch(targetHost, @"^\d+\.\d+\.\d+\.\d+$");
 
-                    // 1. Resolve DNS IPv4
+                    // 1. Reverse DNS / Forward DNS resolution (nslookup equivalent)
                     try
                     {
-                        IPHostEntry host = Dns.GetHostEntry(targetHost);
-                        List<string> ips = new List<string>();
-                        foreach (IPAddress ip in host.AddressList)
+                        IPAddress addr;
+                        if (IPAddress.TryParse(targetHost, out addr))
                         {
-                            if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
-                                ips.Add(ip.ToString());
+                            resolvedIp = targetHost;
+                            try
+                            {
+                                IPHostEntry entry = Dns.GetHostEntry(addr);
+                                if (entry != null && !string.IsNullOrEmpty(entry.HostName))
+                                {
+                                    resolvedHostname = entry.HostName;
+                                }
+                                else
+                                {
+                                    resolvedHostname = "(No PTR hostname record registered in DNS)";
+                                }
+                            }
+                            catch
+                            {
+                                resolvedHostname = "(Reverse DNS / PTR lookup failed - no hostname found for this IP)";
+                            }
                         }
-                        resolvedIp = ips.Count > 0 ? string.Join(", ", ips.ToArray()) : "(No IPv4 registered)";
+                        else
+                        {
+                            resolvedHostname = targetHost;
+                            IPHostEntry host = Dns.GetHostEntry(targetHost);
+                            List<string> ips = new List<string>();
+                            foreach (IPAddress ip in host.AddressList)
+                            {
+                                if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                                    ips.Add(ip.ToString());
+                            }
+                            resolvedIp = ips.Count > 0 ? string.Join(", ", ips.ToArray()) : "(No IPv4 registered)";
+                        }
                     }
                     catch
                     {
-                        resolvedIp = targetHost.Contains(".") && Regex.IsMatch(targetHost, @"^\d+\.\d+\.\d+\.\d+$") ? targetHost : "Unresolved (Not in DNS)";
+                        if (isIpInput)
+                        {
+                            resolvedHostname = "(Reverse DNS lookup failed)";
+                            resolvedIp = targetHost;
+                        }
+                        else
+                        {
+                            resolvedHostname = targetHost;
+                            resolvedIp = "Unresolved (Not found in DNS)";
+                        }
                     }
 
                     // 2. Fast Ping Test (1000ms timeout)
@@ -1895,16 +2091,22 @@ namespace DomainLockoutHelper
                         pingStatus = "OFFLINE / UNREACHABLE (Host unreachable or ICMP blocked by firewall)";
                     }
 
-                                        infoText = string.Format(
-                        "CALLER COMPUTER NETWORK & CONNECTIVITY STATUS\r\n" +
-                        "----------------------------------------\r\n" +
-                        "Caller Host / IP:     {0}\r\n" +
-                        "Network Reachability: {1}\r\n" +
-                        "Resolved IPv4:        {2}\r\n\r\n" +
-                        "Active and disconnected user sessions on this machine are queried on the right panel.",
+                    string infrastructureNote = isIpInput
+                        ? "\r\n[INFRASTRUCTURE / SERVER NOTICE]:\r\n  This item represents a network IP address (e.g. ACM server, firewall, RADIUS, or network appliance). QUSER session queries are skipped for IP infrastructure as remote session management only applies to Windows workstations."
+                        : "\r\nActive and disconnected user sessions on this machine can be queried on the right panel via QUSER.";
+
+                    infoText = string.Format(
+                        "CALLER COMPUTER NETWORK & DNS STATUS\r\n" +
+                        "------------------------------------\r\n" +
+                        "Selected Target:      {0}\r\n" +
+                        "Resolved Hostname:    {1}\r\n" +
+                        "Resolved IPv4:        {2}\r\n" +
+                        "Network Reachability: {3}{4}",
                         computerName,
+                        resolvedHostname,
+                        resolvedIp,
                         pingStatus,
-                        resolvedIp);
+                        infrastructureNote);
                 }
                 catch (Exception ex)
                 {
@@ -1924,6 +2126,16 @@ namespace DomainLockoutHelper
         private void QueryQUserAsync(string computerName)
         {
             if (string.IsNullOrEmpty(computerName)) return;
+
+            bool isIpAddress = Regex.IsMatch(computerName, @"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$") || computerName.StartsWith("IP: ", StringComparison.OrdinalIgnoreCase);
+            if (isIpAddress)
+            {
+                _lvSessions.Items.Clear();
+                _btnLogoffUser.Enabled = false;
+                _progressBar.Visible = false;
+                _statusLabel.Text = string.Format("Selected IP address {0}. QUSER remote session query skipped (IP/server infrastructure).", computerName);
+                return;
+            }
 
             _lvSessions.Items.Clear();
             _btnLogoffUser.Enabled = false;
