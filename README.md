@@ -28,10 +28,17 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
   - Correlates the user's `pwdLastSet` timestamp against security log lockout events.
   - When a user updated their password within the last 72 hours and lockouts occurred *after* that timestamp, the tool flags `[CONFIRMED STALE CREDENTIALS]` and isolates the offending caller machines or wireless profiles that are authenticating with the old password.
 
-- **Unlock Accountability & Tracking (Event ID 4767):**
+- **Unlock Accountability & Tracking (Event ID 4767 vs. Automatic FGPP Expiration):**
   - Scans Domain Controller Security logs for Event ID 4767 (*"A user account was unlocked"*).
-  - Identifies exactly who performed prior account unlocks (`SubjectUserName` and `SubjectDomainName`), the Domain Controller that processed it, and the exact timestamp.
-  - Queries natively via targeted read-only Event Log XPath readers without triggering SentinelOne or EDR reconnaissance alerts.
+  - Identifies exactly who performed manual account unlocks (`SubjectUserName` and `SubjectDomainName`), the Domain Controller that processed it, and the exact timestamp.
+  - **Fine-Grained Password Policy (FGPP / PSO) Detection:** Active Directory does not record an event when an account is automatically unlocked by a duration timer. The tool queries `msDS-ResultantPSO`, checks for the absence of Event 4767, and explicitly identifies when an account was auto-unlocked by policy timer (e.g. `Unlock Resolution: AUTOMATIC UNLOCK via FGPP '<PSO-Name>'`).
+  - **Post-Unlock Logon Verification:** Correlates the user's latest lockout event with subsequent successful logons (`lastLogonTimestamp` and Event 4624) to confirm whether the user has successfully authenticated since their last lockout.
+
+- **Targeted Forensic Deep Dive & Client Source IP Discovery (Events 4625, 4771, 4624):**
+  - **Overcoming Masked Caller Devices:** During NTLM or proxy authentications, Event 4740 often lists the Domain Controller itself as the caller. When a user is selected, the tool automatically queries Event 4625 (Logon Failure) and Event 4771 (Kerberos Pre-Auth Failure) scoped specifically to that account.
+  - **Extracts Real Client IP Addresses:** Captures the true originating endpoint IP address (`IpAddress` / `ClientAddress`), logon type (Interactive, Network, RDP), and SubStatus / failure reason (e.g. `0xC000006A Bad Password`, `0xC0000234 Account Locked Out`).
+  - **Populates Caller Device List:** Adds the discovered client IP addresses directly to the middle column so administrators can immediately inspect, test connectivity, and isolate the physical machine.
+  - **EDR & MDR Safe Scoped Execution:** Never conducts massive, domain-wide event queries that can trigger Managed Detection and Response (MDR/EDR) alarms (such as Arctic Wolf, SentinelOne, CrowdStrike, or Microsoft Defender). Queries are targeted strictly to the investigated user and limited to recent events.
 
 - **Enterprise 802.1X Wi-Fi & NPS / RADIUS Proxy Playbook:**
   - Detects when caller devices point to an authentication proxy (such as Microsoft Network Policy Server / NPS).

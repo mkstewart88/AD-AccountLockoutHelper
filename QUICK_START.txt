@@ -45,15 +45,25 @@ BUILT-IN ZERO-DEPENDENCY FORENSIC CAPABILITIES:
    - Automatically correlates recent password changes (within 72 hours) against
      lockout timestamps to detect and flag [CONFIRMED STALE CREDENTIALS].
 
-4. Kerberos Bad Password Pre-Authentication Forensics (Event 4771):
-   - Captures caller Client IP addresses (even when Event 4740 leaves caller
-     blank) and decodes Kerberos status codes (0x18 = Wrong Password, etc.).
+4. Targeted Forensic Deep Dive & Client Source IP Discovery (Events 4625, 4771, 4624):
+   - Overcomes masked caller devices: When Event 4740 lists a Domain Controller as the caller,
+     the tool queries Event 4625 (Logon Failure) and Event 4771 (Kerberos Pre-Auth Failure)
+     scoped strictly to the investigated user.
+   - Captures true client IP addresses (e.g., 10.x.x.x), logon types (Console, Network, RDP),
+     and failure status codes (0xC000006A Bad Password, 0xC0000234 Locked Out, 0x18 Pre-Auth Failed).
+   - EDR / MDR Safe: Never runs massive DC-wide log queries that trigger Arctic Wolf, SentinelOne,
+     or Microsoft Defender alerts.
 
-5. Caller Host Connectivity & DNS Resolution:
+5. Unlock Accountability & Fine-Grained Password Policy (FGPP / PSO) Detection:
+   - Evaluates msDS-ResultantPSO and event logs to differentiate between manual administrator
+     unlocks (Event 4767) and automatic duration timer expirations (e.g. FGPP 30-minute auto-unlock).
+   - Verifies post-unlock logon activity to confirm when the user authenticated after an unlock.
+
+6. Caller Host Connectivity & DNS Resolution:
    - Runs fast ICMP Ping reachability tests, resolves DNS IPv4/IPv6 addresses,
      and tests caller device reachability without triggering EDR discovery alerts.
 
-6. Remote Workstation Session Interrogation (QUSER):
+7. Remote Workstation Session Interrogation (QUSER):
    - Safely query active and disconnected user sessions, remotely log off
      stale sessions, or initiate a safe remote computer reboot.
 

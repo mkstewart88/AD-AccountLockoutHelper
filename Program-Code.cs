@@ -104,6 +104,7 @@ namespace DomainLockoutHelper
         public DateTime? LatestEventTime { get; set; }
         public string LatestCaller { get; set; }
         public string LatestDC { get; set; }
+        public string ResultantPSO { get; set; }
         public List<LockoutEventItem> Events { get; set; }
 
         public UserRecord()
@@ -126,6 +127,9 @@ namespace DomainLockoutHelper
         public DateTime TimeCreated { get; set; }
         public int EventId { get; set; }
         public string CallerComputer { get; set; }
+        public string SourceIp { get; set; }
+        public string LogonType { get; set; }
+        public string StatusOrCode { get; set; }
         public string UnlockedBy { get; set; }
         public string DomainController { get; set; }
         public long RecordId { get; set; }
@@ -839,7 +843,7 @@ namespace DomainLockoutHelper
                                     "samaccountname", "displayname", "userprincipalname", "mail",
                                     "department", "title", "useraccountcontrol", "badpwdcount",
                                     "lastbadpasswordattempt", "pwdlastset", "lockouttime",
-                                    "lastlogontimestamp", "accountexpires", "memberof"
+                                    "lastlogontimestamp", "accountexpires", "memberof", "msds-resultantpso"
                                 });
 
                                 SearchResultCollection results = searcher.FindAll();
@@ -930,6 +934,20 @@ namespace DomainLockoutHelper
                                                     string grpName = commaIdx > 3 ? grpStr.Substring(3, commaIdx - 3) : grpStr.Substring(3);
                                                     uRec.MemberOfGroups.Add(grpName);
                                                 }
+                                            }
+                                        }
+
+                                        if (res.Properties.Contains("msds-resultantpso") && res.Properties["msds-resultantpso"].Count > 0)
+                                        {
+                                            string psoStr = res.Properties["msds-resultantpso"][0].ToString();
+                                            if (psoStr.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
+                                            {
+                                                int commaIdx = psoStr.IndexOf(',');
+                                                uRec.ResultantPSO = commaIdx > 3 ? psoStr.Substring(3, commaIdx - 3) : psoStr.Substring(3);
+                                            }
+                                            else
+                                            {
+                                                uRec.ResultantPSO = psoStr;
                                             }
                                         }
 
@@ -1104,6 +1122,7 @@ namespace DomainLockoutHelper
                             bool histMustChange = false;
                             bool histPwdNeverExp = false;
                             List<string> histGroups = new List<string>();
+                            string histPSO = null;
 
                             if (disabledAccountCache.ContainsKey(sam))
                             {
@@ -1119,7 +1138,7 @@ namespace DomainLockoutHelper
                                         searcher.PropertiesToLoad.AddRange(new string[] {
                                             "displayname", "useraccountcontrol", "mail", "department", "title",
                                             "userprincipalname", "pwdlastset", "badpwdcount", "lastbadpasswordattempt",
-                                            "lastlogontimestamp", "accountexpires", "memberof"
+                                            "lastlogontimestamp", "accountexpires", "memberof", "msds-resultantpso"
                                         });
                                         SearchResult sr = searcher.FindOne();
                                         if (sr != null)
@@ -1175,6 +1194,19 @@ namespace DomainLockoutHelper
                                                     }
                                                 }
                                             }
+                                            if (sr.Properties.Contains("msds-resultantpso") && sr.Properties["msds-resultantpso"].Count > 0)
+                                            {
+                                                string psoStr = sr.Properties["msds-resultantpso"][0].ToString();
+                                                if (psoStr.StartsWith("CN=", StringComparison.OrdinalIgnoreCase))
+                                                {
+                                                    int commaIdx = psoStr.IndexOf(',');
+                                                    histPSO = commaIdx > 3 ? psoStr.Substring(3, commaIdx - 3) : psoStr.Substring(3);
+                                                }
+                                                else
+                                                {
+                                                    histPSO = psoStr;
+                                                }
+                                            }
                                         }
                                     }
                                 }
@@ -1206,6 +1238,7 @@ namespace DomainLockoutHelper
                                 MustChangePasswordAtNextLogon = histMustChange,
                                 PasswordNeverExpires = histPwdNeverExp,
                                 MemberOfGroups = histGroups,
+                                ResultantPSO = histPSO,
                                 Events = kvp.Value,
                                 EventCount = kvp.Value.Count,
                                 LatestEventTime = kvp.Value.Count > 0 ? (DateTime?)kvp.Value[0].TimeCreated : null,
@@ -1307,40 +1340,75 @@ namespace DomainLockoutHelper
             _btnLogoffUser.Enabled = false;
             _btnRebootComputer.Enabled = false;
 
+            // 1. Initial render with existing/cached data
+            PopulateCallerComputersAndRender(_selectedUser);
+
+            // 2. Asynchronously fetch deep targeted forensics (4625, 4771, 4624) specifically for this user
+            UserRecord targetForForensics = _selectedUser;
+            ThreadPool.QueueUserWorkItem(state =>
+            {
+                FetchTargetedForensicEvents(targetForForensics);
+            });
+        }
+
+        private void PopulateCallerComputersAndRender(UserRecord user)
+        {
+            if (user == null) return;
+
             // Populate Caller Computers & Client IPs (Column 2)
             _lstCallerComputers.BeginUpdate();
             _lstCallerComputers.Items.Clear();
 
             Dictionary<string, CallerComputerItem> callerMap = new Dictionary<string, CallerComputerItem>(StringComparer.OrdinalIgnoreCase);
 
-            if (!string.IsNullOrEmpty(_selectedUser.LatestCaller))
+            if (!string.IsNullOrEmpty(user.LatestCaller))
             {
-                callerMap[_selectedUser.LatestCaller] = new CallerComputerItem
+                callerMap[user.LatestCaller] = new CallerComputerItem
                 {
-                    ComputerName = _selectedUser.LatestCaller,
+                    ComputerName = user.LatestCaller,
                     EventCount = 1,
-                    LatestEvent = _selectedUser.LatestEventTime
+                    LatestEvent = user.LatestEventTime
                 };
             }
 
-            foreach (var evt in _selectedUser.Events)
+            foreach (var evt in user.Events)
             {
                 string target = !string.IsNullOrEmpty(evt.CallerComputer) ? evt.CallerComputer : null;
-                if (string.IsNullOrEmpty(target)) continue;
-
-                if (!callerMap.ContainsKey(target))
+                if (!string.IsNullOrEmpty(target))
                 {
-                    callerMap[target] = new CallerComputerItem
+                    if (!callerMap.ContainsKey(target))
                     {
-                        ComputerName = target,
-                        EventCount = 0,
-                        LatestEvent = evt.TimeCreated
-                    };
+                        callerMap[target] = new CallerComputerItem
+                        {
+                            ComputerName = target,
+                            EventCount = 0,
+                            LatestEvent = evt.TimeCreated
+                        };
+                    }
+                    callerMap[target].EventCount++;
+                    if (callerMap[target].LatestEvent == null || evt.TimeCreated > callerMap[target].LatestEvent)
+                    {
+                        callerMap[target].LatestEvent = evt.TimeCreated;
+                    }
                 }
-                callerMap[target].EventCount++;
-                if (callerMap[target].LatestEvent == null || evt.TimeCreated > callerMap[target].LatestEvent)
+
+                if (!string.IsNullOrEmpty(evt.SourceIp) && !string.Equals(evt.SourceIp, target, StringComparison.OrdinalIgnoreCase))
                 {
-                    callerMap[target].LatestEvent = evt.TimeCreated;
+                    string ipTarget = evt.SourceIp;
+                    if (!callerMap.ContainsKey(ipTarget))
+                    {
+                        callerMap[ipTarget] = new CallerComputerItem
+                        {
+                            ComputerName = ipTarget,
+                            EventCount = 0,
+                            LatestEvent = evt.TimeCreated
+                        };
+                    }
+                    callerMap[ipTarget].EventCount++;
+                    if (callerMap[ipTarget].LatestEvent == null || evt.TimeCreated > callerMap[ipTarget].LatestEvent)
+                    {
+                        callerMap[ipTarget].LatestEvent = evt.TimeCreated;
+                    }
                 }
             }
 
@@ -1360,7 +1428,112 @@ namespace DomainLockoutHelper
             }
 
             // Render Account Details & Root Cause Forensics (Column 1)
-            RenderAccountDetails(_selectedUser, callerMap.Keys);
+            RenderAccountDetails(user, callerMap.Keys);
+        }
+
+        private void FetchTargetedForensicEvents(UserRecord user)
+        {
+            if (user == null) return;
+            string sam = user.SamAccountName;
+            List<string> dcs = _discoveredDCs;
+            if (dcs == null || dcs.Count == 0) return;
+
+            List<LockoutEventItem> deepEvents = new List<LockoutEventItem>();
+
+            foreach (string dc in dcs)
+            {
+                try
+                {
+                    // Targeted query strictly for this single user: Logon Failure (4625), Kerberos Pre-Auth Failure (4771), Logon Success (4624)
+                    // Bounded to recent 7 days (604800000 ms) and limited to 50 records per DC
+                    string xpath = string.Format(
+                        "*[System[((EventID=4625 or EventID=4771 or EventID=4624)) and TimeCreated[timediff(@SystemTime) <= 604800000]]] and (*[EventData[Data[@Name='TargetUserName']='{0}']] or *[EventData[Data[@Name='TargetUserName']='{0}@{1}']])",
+                        sam, _domainName ?? "");
+
+                    EventLogQuery query = new EventLogQuery("Security", PathType.LogName, xpath);
+                    query.Session = new EventLogSession(dc);
+
+                    using (EventLogReader reader = new EventLogReader(query))
+                    {
+                        EventRecord record;
+                        int count = 0;
+                        while ((record = reader.ReadEvent()) != null && count < 50)
+                        {
+                            count++;
+                            int id = record.Id;
+                            string caller = null;
+                            string sourceIp = null;
+                            string logonType = null;
+                            string subStatus = null;
+
+                            if (id == 4625)
+                            {
+                                sourceIp = GetNamedEventData(record, "IpAddress");
+                                caller = GetNamedEventData(record, "WorkstationName");
+                                logonType = GetNamedEventData(record, "LogonType");
+                                subStatus = GetNamedEventData(record, "SubStatus");
+                                if (string.IsNullOrEmpty(subStatus)) subStatus = GetNamedEventData(record, "Status");
+                            }
+                            else if (id == 4771)
+                            {
+                                sourceIp = GetNamedEventData(record, "ClientAddress");
+                                if (string.IsNullOrEmpty(sourceIp)) sourceIp = GetNamedEventData(record, "IpAddress");
+                                subStatus = GetNamedEventData(record, "FailureCode");
+                                if (string.IsNullOrEmpty(subStatus)) subStatus = GetNamedEventData(record, "Status");
+                            }
+                            else if (id == 4624)
+                            {
+                                caller = GetNamedEventData(record, "WorkstationName");
+                                sourceIp = GetNamedEventData(record, "IpAddress");
+                                logonType = GetNamedEventData(record, "LogonType");
+                            }
+
+                            if (!string.IsNullOrEmpty(sourceIp))
+                            {
+                                sourceIp = sourceIp.Replace("::ffff:", "").Trim();
+                                if (sourceIp == "-" || sourceIp == "127.0.0.1" || sourceIp == "::1") sourceIp = null;
+                            }
+                            if (!string.IsNullOrEmpty(caller))
+                            {
+                                caller = caller.Trim();
+                                if (caller == "-" || caller == "?") caller = null;
+                            }
+
+                            deepEvents.Add(new LockoutEventItem
+                            {
+                                TimeCreated = record.TimeCreated ?? DateTime.Now,
+                                EventId = id,
+                                CallerComputer = !string.IsNullOrEmpty(caller) ? NormalizeComputer(caller) : null,
+                                SourceIp = sourceIp,
+                                LogonType = DecodeLogonType(logonType),
+                                StatusOrCode = DecodeSubStatus(subStatus),
+                                DomainController = dc,
+                                RecordId = record.RecordId ?? 0
+                            });
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            if (deepEvents.Count > 0)
+            {
+                this.BeginInvoke((Action)(() =>
+                {
+                    if (_selectedUser != null && string.Equals(_selectedUser.SamAccountName, sam, StringComparison.OrdinalIgnoreCase))
+                    {
+                        foreach (var de in deepEvents)
+                        {
+                            if (!_selectedUser.Events.Exists(e => e.EventId == de.EventId && e.RecordId == de.RecordId && e.DomainController == de.DomainController))
+                            {
+                                _selectedUser.Events.Add(de);
+                            }
+                        }
+                        _selectedUser.Events.Sort((a, b) => b.TimeCreated.CompareTo(a.TimeCreated));
+                        PopulateCallerComputersAndRender(_selectedUser);
+                    }
+                }));
+            }
         }
 
         private void RenderAccountDetails(UserRecord u, IEnumerable<string> callers)
@@ -1482,29 +1655,64 @@ namespace DomainLockoutHelper
             sb.AppendLine(string.Format("Account Expiration:       {0}", u.AccountExpires.HasValue ? u.AccountExpires.Value.ToString("yyyy-MM-dd HH:mm:ss") : "Never"));
             sb.AppendLine(string.Format("Primary Security Groups:  {0}", (u.MemberOfGroups != null && u.MemberOfGroups.Count > 0) ? string.Join(", ", u.MemberOfGroups.ToArray()) : "(none or Domain Users)"));
 
-            // Check for previous unlock events (Event 4767)
+            string policyDesc = !string.IsNullOrEmpty(u.ResultantPSO)
+                ? string.Format("Fine-Grained Password Policy (PSO: '{0}')", u.ResultantPSO)
+                : "Default Domain Password Policy";
+            sb.AppendLine(string.Format("Password Policy:          {0}", policyDesc));
+
+            // Check for previous unlock events (Event 4767) vs Automatic Policy Timer Expiration (FGPP / Domain)
             LockoutEventItem latestUnlock = u.Events.Find(ev => ev.EventId == 4767);
+            LockoutEventItem latestLockout = u.Events.Find(ev => ev.EventId == 4740);
+
             if (latestUnlock != null)
             {
                 sb.AppendLine(string.Format("Last Unlocked By:         {0} ({1:yyyy-MM-dd HH:mm:ss} on DC {2})",
                     string.IsNullOrEmpty(latestUnlock.UnlockedBy) ? "(Administrator not recorded)" : latestUnlock.UnlockedBy,
                     latestUnlock.TimeCreated,
                     latestUnlock.DomainController));
+                sb.AppendLine("Unlock Resolution:        Manual Administrator Action (Security Event 4767)");
+            }
+            else if (!u.IsCurrentlyLocked && latestLockout != null)
+            {
+                sb.AppendLine("Last Unlocked By:         (No 4767 unlock events in cached Security log)");
+                sb.AppendLine(string.Format("Unlock Resolution:        AUTOMATIC UNLOCK via {0} (Lockout duration timer expired)",
+                    !string.IsNullOrEmpty(u.ResultantPSO) ? ("FGPP '" + u.ResultantPSO + "'") : "Domain Policy"));
             }
             else
             {
                 sb.AppendLine("Last Unlocked By:         (No 4767 unlock events in cached Security log)");
             }
 
+            // Post-Unlock Logon Status (correlating last successful logon with latest lockout event)
+            if (latestLockout != null && u.LastLogonTimestamp.HasValue)
+            {
+                if (u.LastLogonTimestamp.Value > latestLockout.TimeCreated)
+                {
+                    sb.AppendLine(string.Format("Post-Unlock Logon (AD):   YES - User logged on at {0:yyyy-MM-dd HH:mm:ss} (Active Directory confirmed)", u.LastLogonTimestamp.Value));
+                }
+                else
+                {
+                    sb.AppendLine(string.Format("Post-Unlock Logon (AD):   NO - No successful domain logons recorded since latest lockout ({0:yyyy-MM-dd HH:mm:ss})", latestLockout.TimeCreated));
+                }
+            }
+
             int lockoutCount = 0;
             int unlockCount = 0;
+            int failureCount = 0;
+            int successCount = 0;
             foreach (var ev in u.Events)
             {
                 if (ev.EventId == 4767) unlockCount++;
-                else lockoutCount++;
+                else if (ev.EventId == 4740) lockoutCount++;
+                else if (ev.EventId == 4625 || ev.EventId == 4771) failureCount++;
+                else if (ev.EventId == 4624) successCount++;
             }
             sb.AppendLine(string.Format("Lockout Events (4740):    {0}", lockoutCount));
             sb.AppendLine(string.Format("Unlock Events (4767):     {0}", unlockCount));
+            if (failureCount > 0)
+                sb.AppendLine(string.Format("Logon Failures (4625/4771):{0}", failureCount));
+            if (successCount > 0)
+                sb.AppendLine(string.Format("Successful Logons (4624): {0}", successCount));
             sb.AppendLine();
 
             // 2. Root Cause Diagnosis & Action Plan
@@ -1516,18 +1724,35 @@ namespace DomainLockoutHelper
             sb.AppendLine(remediation);
             sb.AppendLine();
 
-            // 3. Caller Computers
+            // 3. Caller Computers & Source Devices
             sb.AppendLine("CALLER COMPUTERS & SOURCE DEVICES");
             sb.AppendLine("=================================");
-            sb.AppendLine(string.IsNullOrEmpty(callerStr) ? "(None recorded in Security logs)" : callerStr);
+            if (callers != null)
+            {
+                int cCount = 0;
+                foreach (string c in callers)
+                {
+                    cCount++;
+                    bool isIp = Regex.IsMatch(c, @"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$");
+                    if (isIp)
+                        sb.AppendLine(string.Format("* {0}  [Client Source IP - captured from Event 4625 / 4771]", c));
+                    else
+                        sb.AppendLine(string.Format("* {0}  [Calling Hostname - reported in Event 4740 / 4625]", c));
+                }
+                if (cCount == 0) sb.AppendLine("(None recorded in Security logs)");
+            }
+            else
+            {
+                sb.AppendLine("(None recorded in Security logs)");
+            }
             sb.AppendLine();
 
-            // 4. Event Audit Log Timeline (Lockout 4740 & Unlock 4767)
+            // 4. Event Audit Log Timeline (Lockout 4740, Unlock 4767, Logon Failure 4625, Kerberos 4771, Logon Success 4624)
             sb.AppendLine("EVENT AUDIT LOG TIMELINE");
             sb.AppendLine("========================");
             if (u.Events.Count == 0)
             {
-                sb.AppendLine("No recent 4740 lockout or 4767 unlock events cached from online DCs.");
+                sb.AppendLine("No recent 4740 lockout, 4767 unlock, or 4625 failure events cached from online DCs.");
             }
             else
             {
@@ -1541,13 +1766,45 @@ namespace DomainLockoutHelper
                             evt.DomainController,
                             evt.RecordId));
                     }
-                    else
+                    else if (evt.EventId == 4740)
                     {
                         sb.AppendLine(string.Format("{0:yyyy-MM-dd HH:mm:ss} | Event 4740 (ACCOUNT LOCKED)   | Caller: {1} | DC: {2} | Record: {3}",
                             evt.TimeCreated,
                             string.IsNullOrEmpty(evt.CallerComputer) ? "(Caller computer not recorded)" : evt.CallerComputer,
                             evt.DomainController,
                             evt.RecordId));
+                    }
+                    else if (evt.EventId == 4625)
+                    {
+                        string ipInfo = !string.IsNullOrEmpty(evt.SourceIp) ? evt.SourceIp : "(IP not recorded)";
+                        string wsInfo = !string.IsNullOrEmpty(evt.CallerComputer) ? evt.CallerComputer : "(Workstation not recorded)";
+                        sb.AppendLine(string.Format("{0:yyyy-MM-dd HH:mm:ss} | Event 4625 (LOGON FAILURE)    | Source IP: {1} | Workstation: {2} | {3} | SubStatus: {4} | DC: {5}",
+                            evt.TimeCreated,
+                            ipInfo,
+                            wsInfo,
+                            !string.IsNullOrEmpty(evt.LogonType) ? evt.LogonType : "Network (3)",
+                            !string.IsNullOrEmpty(evt.StatusOrCode) ? evt.StatusOrCode : "0xC000006A (Bad Password)",
+                            evt.DomainController));
+                    }
+                    else if (evt.EventId == 4771)
+                    {
+                        string ipInfo = !string.IsNullOrEmpty(evt.SourceIp) ? evt.SourceIp : "(IP not recorded)";
+                        sb.AppendLine(string.Format("{0:yyyy-MM-dd HH:mm:ss} | Event 4771 (KERBEROS PREAUTH)  | Client IP: {1} | Code: {2} | DC: {3}",
+                            evt.TimeCreated,
+                            ipInfo,
+                            !string.IsNullOrEmpty(evt.StatusOrCode) ? evt.StatusOrCode : "0x18 (Pre-Auth Failed)",
+                            evt.DomainController));
+                    }
+                    else if (evt.EventId == 4624)
+                    {
+                        string ipInfo = !string.IsNullOrEmpty(evt.SourceIp) ? evt.SourceIp : "(IP not recorded)";
+                        string wsInfo = !string.IsNullOrEmpty(evt.CallerComputer) ? evt.CallerComputer : "(Workstation not recorded)";
+                        sb.AppendLine(string.Format("{0:yyyy-MM-dd HH:mm:ss} | Event 4624 (SUCCESSFUL LOGON) | Workstation: {1} | IP: {2} | {3} | DC: {4}",
+                            evt.TimeCreated,
+                            wsInfo,
+                            ipInfo,
+                            !string.IsNullOrEmpty(evt.LogonType) ? evt.LogonType : "Interactive",
+                            evt.DomainController));
                     }
                 }
             }
@@ -2079,6 +2336,66 @@ namespace DomainLockoutHelper
             if (s.StartsWith("\\\\")) s = s.Substring(2);
             if (s == "-" || s == "?" || s.Equals("unknown", StringComparison.OrdinalIgnoreCase)) return "";
             return s;
+        }
+
+        private string DecodeLogonType(string type)
+        {
+            if (string.IsNullOrEmpty(type)) return "";
+            string t = type.Trim();
+            switch (t)
+            {
+                case "2": return "Type 2 (Interactive Console)";
+                case "3": return "Type 3 (Network / Wi-Fi / SMB)";
+                case "4": return "Type 4 (Batch Job)";
+                case "5": return "Type 5 (Windows Service)";
+                case "7": return "Type 7 (Unlock Workstation)";
+                case "8": return "Type 8 (Network Cleartext)";
+                case "9": return "Type 9 (NewCredentials)";
+                case "10": return "Type 10 (Remote Desktop / RDP)";
+                case "11": return "Type 11 (Cached Interactive)";
+                default: return "Type " + t;
+            }
+        }
+
+        private string DecodeSubStatus(string status)
+        {
+            if (string.IsNullOrEmpty(status)) return "";
+            string s = status.Trim();
+            if (s.Equals("0xC000006A", StringComparison.OrdinalIgnoreCase) || s.Equals("3221225578", StringComparison.OrdinalIgnoreCase))
+                return "0xC000006A (Bad Password)";
+            if (s.Equals("0xC0000234", StringComparison.OrdinalIgnoreCase) || s.Equals("3221226036", StringComparison.OrdinalIgnoreCase))
+                return "0xC0000234 (Account Locked Out)";
+            if (s.Equals("0xC0000072", StringComparison.OrdinalIgnoreCase) || s.Equals("3221225586", StringComparison.OrdinalIgnoreCase))
+                return "0xC0000072 (Account Disabled)";
+            if (s.Equals("0xC0000193", StringComparison.OrdinalIgnoreCase) || s.Equals("3221225875", StringComparison.OrdinalIgnoreCase))
+                return "0xC0000193 (Account Expired)";
+            if (s.Equals("0xC0000071", StringComparison.OrdinalIgnoreCase) || s.Equals("3221225585", StringComparison.OrdinalIgnoreCase))
+                return "0xC0000071 (Password Expired)";
+            if (s.Equals("0xC0000224", StringComparison.OrdinalIgnoreCase) || s.Equals("3221226020", StringComparison.OrdinalIgnoreCase))
+                return "0xC0000224 (User Must Change Password)";
+            if (s.Equals("0x18", StringComparison.OrdinalIgnoreCase) || s.Equals("24", StringComparison.OrdinalIgnoreCase))
+                return "0x18 (Bad Password / Pre-Auth Failed)";
+            if (s.Equals("0x12", StringComparison.OrdinalIgnoreCase) || s.Equals("18", StringComparison.OrdinalIgnoreCase))
+                return "0x12 (Account Locked)";
+            if (s.Equals("0x17", StringComparison.OrdinalIgnoreCase) || s.Equals("23", StringComparison.OrdinalIgnoreCase))
+                return "0x17 (Password Expired)";
+            return s;
+        }
+
+        private string GetNamedEventData(EventRecord record, string dataName)
+        {
+            if (record == null) return null;
+            try
+            {
+                string xml = record.ToXml();
+                if (!string.IsNullOrEmpty(xml))
+                {
+                    Match m = Regex.Match(xml, string.Format(@"<Data\s+Name=['""]{0}['""]>([^<]*)</Data>", Regex.Escape(dataName)), RegexOptions.IgnoreCase);
+                    if (m.Success) return m.Groups[1].Value.Trim();
+                }
+            }
+            catch { }
+            return null;
         }
     }
 
