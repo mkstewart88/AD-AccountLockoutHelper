@@ -275,7 +275,7 @@ namespace DomainLockoutHelper
             headerPanel.BorderStyle = BorderStyle.FixedSingle;
 
             Label lblTitle = new Label();
-            lblTitle.Text = "Account Lockout Helper (v1.0.3)";
+            lblTitle.Text = "Account Lockout Helper";
             lblTitle.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
             lblTitle.ForeColor = Color.FromArgb(15, 23, 42);
             lblTitle.AutoSize = true;
