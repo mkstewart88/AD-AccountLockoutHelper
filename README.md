@@ -71,9 +71,10 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
 - **Global Dark Mode Theme Toggle:**
   - Includes a global Dark Mode theme toggle designed for server rooms and data centers.
 
-- **100% Offline & Deterministic -- CIPA / FERPA / COPPA / HIPAA Compliant:**
-  - Root cause diagnostics operate entirely through deterministic offline rules evaluating Windows Security Event ID 4740, NTSTATUS codes, and LDAP attributes.
-  - Authentication logs, user SAMAccountNames, computer hostnames, and IP addresses never leave the administrator's local machine or domain boundary.
+- **Privacy-First Architecture:**
+  - Designed for secure environments: Runs entirely offline on the administrator's local machine. 
+  - Zero telemetry, zero data storage, and zero data transmission to external servers.
+  - Deterministic operation based strictly on local Active Directory Service Interfaces and Windows Security Event Logs.
 
 ---
 

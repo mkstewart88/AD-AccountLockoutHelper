@@ -86,4 +86,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Complete removal of broad directory sweeps (`objectCategory=computer` LDAP queries) to ensure 100% compliance with enterprise EDR solutions (SentinelOne, CrowdStrike, Defender).
 - Event Log queries utilize native, targeted read-only XPath event readers without generating anomalous process telemetry or network scan alerts.
 - Full .NET assembly versioning and manifest attributes embedded in C# source.
-- 100% offline and deterministic execution ensuring complete CIPA, FERPA, COPPA, and HIPAA compliance.
+- 100% offline, deterministic, and privacy-first execution. No telemetry or external data transmission ensuring suitability for secure environments.
