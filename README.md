@@ -34,16 +34,17 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
   - **Fine-Grained Password Policy (FGPP / PSO) Detection:** Active Directory does not record an event when an account is automatically unlocked by a duration timer. The tool queries `msDS-ResultantPSO`, checks for the absence of Event 4767, and explicitly identifies when an account was auto-unlocked by policy timer (e.g. `Unlock Resolution: AUTOMATIC UNLOCK via FGPP '<PSO-Name>'`).
   - **Post-Unlock Logon Verification:** Correlates the user's latest lockout event with subsequent successful logons (`lastLogonTimestamp` and Event 4624) to confirm whether the user has successfully authenticated since their last lockout.
 
-- **Targeted Forensic Deep Dive & Client Source IP Discovery (Events 4625, 4771, 4624):**
-  - **Overcoming Masked Caller Devices:** During NTLM or proxy authentications, Event 4740 often lists the Domain Controller itself as the caller. When a user is selected, the tool automatically queries Event 4625 (Logon Failure) and Event 4771 (Kerberos Pre-Auth Failure) scoped specifically to that account.
-  - **Extracts Real Client IP Addresses:** Captures the true originating endpoint IP address (`IpAddress` / `ClientAddress`), logon type (Interactive, Network, RDP), and SubStatus / failure reason (e.g. `0xC000006A Bad Password`, `0xC0000234 Account Locked Out`).
-  - **Populates Caller Device List:** Adds the discovered client IP addresses directly to the middle column so administrators can immediately inspect, test connectivity, and isolate the physical machine.
-  - **EDR & MDR Safe Scoped Execution:** Never conducts massive, domain-wide event queries that can trigger Managed Detection and Response (MDR/EDR) alarms (such as Arctic Wolf, SentinelOne, CrowdStrike, or Microsoft Defender). Queries are targeted strictly to the investigated user and limited to recent events.
+- **Targeted Forensic Deep Dive (Events 4625, 4771, 4624, 4740, 4776, 4767, 4724):**
+  - **Overcoming Masked Caller Devices:** During NTLM, RDP, or proxy authentications, Event 4740 often records the Domain Controller itself as the caller. When a user is selected, the tool automatically queries Event 4625 (Logon Failure), Event 4771 (Kerberos Pre-Auth Failure), Event 4776 (NTLM Validation), and Event 4624 (Logon Success) scoped specifically to that account.
+  - **Dual-Box UI Isolation (Caller Computers vs. Notable Client IPs):** Keeps physical Windows workstations separate from network infrastructure IP addresses (e.g., servers, firewalls, RADIUS proxies, and network appliances).
+  - **Asynchronous Reverse DNS (PTR) Resolution:** Automatically resolves client IP addresses to hostnames in the background and renders inline mappings (e.g., `10.1.20.45 -> WKSTN-042.corp.contoso.com`).
+  - **Intelligent Machine Deduplication:** Automatically filters out IP addresses whose resolved hostnames match workstations already listed in Caller Computers, eliminating redundant entries for the same machine.
+  - **Targeted Active Directory Computer Object Inspection:** Directly inspects single AD computer objects (`(&(objectCategory=computer)(sAMAccountName=SHORTNAME$))`) to report Operating System, version, OU location, and classification (Windows Server vs. Windows Workstation vs. Non-domain Linux, Chromebook, or mobile device).
+  - **EDR & MDR Safe Scoped Execution:** Never conducts massive, domain-wide event queries that can trigger Managed Detection and Response (MDR/EDR) alarms (such as Arctic Wolf, SentinelOne, CrowdStrike, or Microsoft Defender). Queries are targeted strictly to the investigated user and bounded to the recent 7 days.
 
 - **Enterprise 802.1X Wi-Fi & NPS / RADIUS Proxy Playbook:**
   - Detects when caller devices point to an authentication proxy (such as Microsoft Network Policy Server / NPS).
   - Outlines the step-by-step procedure to inspect NPS Event ID 6273 on the NPS server to retrieve the physical device's hardware MAC address (`Calling-Station-Id`) and Wi-Fi Access Point location (`Client-Friendly-Name`).
-
 
 - **Caller Host Connectivity & DNS Resolution:**
   - Runs a fast ICMP Ping test (1000ms timeout) reporting online status and roundtrip latency.
@@ -61,6 +62,11 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
 - **One-Click Account Unlock & Password Reset:**
   - Unlocks user accounts directly across the domain's Primary Domain Controller (PDC) emulator.
   - Prompts to immediately reset the user's password if requested, with options to require a password change at next logon.
+
+- **Structured Tabular Layout with Aligned Columns & Visual Divider Lines:**
+  - Native Consolas fixed-width monospace typography ensures all Active Directory fields and values align in a crisp two-column grid (`FIELD | VALUE`).
+  - The Event Audit Log Timeline is formatted with dedicated columns (`DATE & TIME | EVENT ID & TYPE | CALLER / IP / WORKSTATION | STATUS / RESULT / CODE | DOMAIN CONTROLLER`) with horizontal and vertical scrollbars, preventing unsightly line wrapping and mid-word breaks.
+  - Rich color highlighting for quick visual triage: Red for Active Lockouts and Bad Password failures, Green for Unlocks and Logon Successes, Sky Blue for Section Headers, and Gold/Amber for Warnings.
 
 - **Global Dark Mode Theme Toggle:**
   - Includes a global Dark Mode theme toggle designed for server rooms and data centers.

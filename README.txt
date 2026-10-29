@@ -65,9 +65,19 @@ BUILT-IN FORENSIC CAPABILITIES:
   Guides administrators to inspect NPS Event ID 6273 to identify the client's
   physical MAC address (Calling-Station-Id) and connected Access Point.
 
-* Kerberos Bad Password Pre-Authentication Forensics (Event 4771):
-  Scans for Kerberos Event 4771 to capture caller Client IP addresses (even when
-  Event 4740 leaves caller computer blank) and decodes error codes (e.g. 0x18).
+* Multi-Event Targeted Forensics (Events 4625, 4771, 4624, 4740, 4776, 4767, 4724):
+  Scans for Kerberos failures (4771), NTLM validation (4776), logon failures (4625),
+  lockouts (4740), unlocks (4767), admin password resets (4724), and post-unlock
+  logon confirmations (4624) directly from DC security logs.
+
+* Dual-Box Caller Computers & Notable Client IPs Separation:
+  Separates physical Windows workstations from infrastructure IPs (firewalls,
+  servers, RADIUS proxies, network appliances). Background reverse DNS resolves IPs
+  to hostnames and deduplicates machines across both lists.
+
+* Targeted Active Directory Computer Record Inspection:
+  Directly inspects AD computer objects to identify Windows Server vs. Workstation
+  vs. non-domain endpoints (Linux, Chromebooks, mobile devices).
 
 * Caller Host Connectivity & DNS Resolution:
   Runs fast ICMP Ping tests (with latency reporting), resolves DNS IPv4/IPv6,

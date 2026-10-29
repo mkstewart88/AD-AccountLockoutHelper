@@ -142,15 +142,37 @@ namespace DomainLockoutHelper
         public DateTime? LatestEvent { get; set; }
         public string EventTypes { get; set; }
         public string ResolvedHostname { get; set; }
+        public List<string> AssociatedIPs { get; set; }
+
+        public CallerComputerItem()
+        {
+            AssociatedIPs = new List<string>();
+        }
 
         public override string ToString()
         {
             string timeStr = LatestEvent.HasValue ? LatestEvent.Value.ToString("yyyy-MM-dd HH:mm:ss") : "No timestamp";
-            if (!string.IsNullOrEmpty(ResolvedHostname) && !ResolvedHostname.StartsWith("("))
+            bool isIp = System.Text.RegularExpressions.Regex.IsMatch(ComputerName, @"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$");
+            if (isIp)
             {
-                return string.Format("{0} -> {1}   |   {2} event(s)   |   Latest: {3}", ComputerName, ResolvedHostname, EventCount, timeStr);
+                string hostDisplay = "(resolving...)";
+                if (!string.IsNullOrEmpty(ResolvedHostname))
+                {
+                    if (ResolvedHostname.StartsWith("("))
+                    {
+                        hostDisplay = "(cannot resolve)";
+                    }
+                    else
+                    {
+                        hostDisplay = ResolvedHostname;
+                    }
+                }
+                return string.Format("{0} -> {1}   |   {2} event(s)   |   Latest: {3}", ComputerName, hostDisplay, EventCount, timeStr);
             }
-            return string.Format("{0}   |   {1} event(s)   |   Latest: {2}", ComputerName, EventCount, timeStr);
+            else
+            {
+                return string.Format("{0}   |   {1} event(s)   |   Latest: {2}", ComputerName, EventCount, timeStr);
+            }
         }
     }
 
@@ -210,9 +232,6 @@ namespace DomainLockoutHelper
         private Panel _headerPanel;
         private Label _lblTitle;
         private Label _lblSub;
-        private GroupBox _grpAccounts;
-        private GroupBox _grpComputers;
-        private GroupBox _grpSessions;
         private StatusStrip _statusStrip;
         private ToolTip _toolTip;
 
@@ -224,7 +243,7 @@ namespace DomainLockoutHelper
         private void InitializeComponent()
         {
             _toolTip = new ToolTip();
-            this.Text = "Account Lockout Helper & Root Cause Investigator";
+            this.Text = "Account Lockout Helper & Root Cause Investigator (v1.0.3)";
             this.Size = new Size(1680, 960);
             this.MinimumSize = new Size(1280, 760);
             this.WindowState = FormWindowState.Maximized;
@@ -324,7 +343,6 @@ namespace DomainLockoutHelper
             // COLUMN 1: ACCOUNT LOCKOUT HISTORY
             // =============================================================
             GroupBox grpAccounts = new GroupBox();
-            _grpAccounts = grpAccounts;
             grpAccounts.Text = " Account Lockout History ";
             grpAccounts.Dock = DockStyle.Fill;
             grpAccounts.Font = new Font("Segoe UI Semibold", 9.5F);
@@ -392,9 +410,9 @@ namespace DomainLockoutHelper
             _rtbAccountDetails.Dock = DockStyle.Fill;
             _rtbAccountDetails.ReadOnly = true;
             _rtbAccountDetails.BackColor = Color.FromArgb(250, 251, 253);
-            _rtbAccountDetails.Font = new Font("Segoe UI", 9F);
-            _rtbAccountDetails.ScrollBars = RichTextBoxScrollBars.Vertical;
-            _rtbAccountDetails.WordWrap = true;
+            _rtbAccountDetails.Font = GetMonospaceFont(9F);
+            _rtbAccountDetails.ScrollBars = RichTextBoxScrollBars.Both;
+            _rtbAccountDetails.WordWrap = false;
             _rtbAccountDetails.Text = "Select an account to view Active Directory attributes, lockout evidence, and root cause diagnosis.";
             grpAccDetails.Controls.Add(_rtbAccountDetails);
             col1Layout.Controls.Add(grpAccDetails, 0, 3);
@@ -463,7 +481,6 @@ namespace DomainLockoutHelper
             // COLUMN 2: CALLER COMPUTERS & NOTABLE CLIENT IPS
             // =============================================================
             GroupBox grpComputers = new GroupBox();
-            _grpComputers = grpComputers;
             grpComputers.Text = " Caller Computers & Notable IPs ";
             grpComputers.Dock = DockStyle.Fill;
             grpComputers.Font = new Font("Segoe UI Semibold", 9.5F);
@@ -474,9 +491,9 @@ namespace DomainLockoutHelper
             col2Layout.Dock = DockStyle.Fill;
             col2Layout.ColumnCount = 1;
             col2Layout.RowCount = 5;
-            col2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 20F)); // Caller Computers
-            col2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 20F)); // Notable IPs
-            col2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 60F)); // Computer Details
+            col2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 22F)); // Caller Computers (Workstations)
+            col2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 22F)); // Notable IPs
+            col2Layout.RowStyles.Add(new RowStyle(SizeType.Percent, 56F)); // Computer Details & AD Record
             col2Layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F)); // Actions (Refresh, Copy)
             col2Layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F)); // Reboot Button
             col2Layout.Padding = new Padding(4);
@@ -518,14 +535,14 @@ namespace DomainLockoutHelper
             _rtbComputerDetails.Dock = DockStyle.Fill;
             _rtbComputerDetails.ReadOnly = true;
             _rtbComputerDetails.BackColor = Color.FromArgb(250, 251, 253);
-            _rtbComputerDetails.Font = new Font("Segoe UI", 9F);
-            _rtbComputerDetails.ScrollBars = RichTextBoxScrollBars.Vertical;
-            _rtbComputerDetails.WordWrap = true;
+            _rtbComputerDetails.Font = GetMonospaceFont(9F);
+            _rtbComputerDetails.ScrollBars = RichTextBoxScrollBars.Both;
+            _rtbComputerDetails.WordWrap = false;
             _rtbComputerDetails.Text = "Select a caller computer or notable IP above to inspect its Active Directory record and network status.";
             grpCompDetails.Controls.Add(_rtbComputerDetails);
             col2Layout.Controls.Add(grpCompDetails, 0, 2);
 
-            // 3. Computer Action buttons
+            // 4. Computer Action buttons
             FlowLayoutPanel compBtnLayout = new FlowLayoutPanel();
             compBtnLayout.Dock = DockStyle.Fill;
             compBtnLayout.FlowDirection = FlowDirection.LeftToRight;
@@ -539,7 +556,13 @@ namespace DomainLockoutHelper
             _btnRefreshComputer.FlatAppearance.BorderColor = Color.FromArgb(220, 227, 236);
             _btnRefreshComputer.Font = new Font("Segoe UI", 8.5F);
             _btnRefreshComputer.Cursor = Cursors.Hand;
-            _btnRefreshComputer.Click += (s, e) => CallerSelectionChanged(null, null);
+            _btnRefreshComputer.Click += (s, e) =>
+            {
+                if (_lstCallerComputers.SelectedItem != null)
+                    CallerSelectionChanged(null, null);
+                else if (_lstNotableIPs.SelectedItem != null)
+                    NotableIpSelectionChanged(null, null);
+            };
 
             _btnCopyComputer = new Button();
             _btnCopyComputer.Text = "Copy Computer Details";
@@ -553,9 +576,9 @@ namespace DomainLockoutHelper
 
             compBtnLayout.Controls.Add(_btnRefreshComputer);
             compBtnLayout.Controls.Add(_btnCopyComputer);
-            col2Layout.Controls.Add(compBtnLayout, 0, 2);
+            col2Layout.Controls.Add(compBtnLayout, 0, 3);
 
-            // 4. Remote Reboot Button
+            // 5. Remote Reboot Button
             _btnRebootComputer = new Button();
             _btnRebootComputer.Text = "REBOOT SELECTED COMPUTER";
             _btnRebootComputer.Dock = DockStyle.Fill;
@@ -567,7 +590,7 @@ namespace DomainLockoutHelper
             _btnRebootComputer.Enabled = false;
             _btnRebootComputer.Cursor = Cursors.Hand;
             _btnRebootComputer.Click += RebootComputerClick;
-            col2Layout.Controls.Add(_btnRebootComputer, 0, 3);
+            col2Layout.Controls.Add(_btnRebootComputer, 0, 4);
 
             grpComputers.Controls.Add(col2Layout);
             workLayout.Controls.Add(grpComputers, 1, 0);
@@ -576,7 +599,6 @@ namespace DomainLockoutHelper
             // COLUMN 3: CURRENT SESSIONS (QUSER)
             // =============================================================
             GroupBox grpSessions = new GroupBox();
-            _grpSessions = grpSessions;
             grpSessions.Text = " Current Sessions on Selected Computer (QUSER) ";
             grpSessions.Dock = DockStyle.Fill;
             grpSessions.Font = new Font("Segoe UI Semibold", 9.5F);
@@ -722,6 +744,15 @@ namespace DomainLockoutHelper
             if (_statusLabel != null) _statusLabel.ForeColor = textSecondary;
             if (_countsLabel != null) _countsLabel.ForeColor = textPrimary;
             if (_domainInfoLabel != null) _domainInfoLabel.ForeColor = textSecondary;
+
+            if (_rtbAccountDetails != null && !string.IsNullOrEmpty(_rtbAccountDetails.Text))
+            {
+                HighlightRichText(_rtbAccountDetails, dark);
+            }
+            if (_rtbComputerDetails != null && !string.IsNullOrEmpty(_rtbComputerDetails.Text))
+            {
+                HighlightRichText(_rtbComputerDetails, dark);
+            }
         }
 
         private void ApplyThemeRecursive(Control parent, bool dark, Color bg, Color surface, Color textPrimary, Color textSecondary, Color inputBg, Color btnBg, Color btnBorder)
@@ -1435,9 +1466,14 @@ namespace DomainLockoutHelper
 
             foreach (var evt in user.Events)
             {
-                if (!string.IsNullOrEmpty(evt.SourceIp))
+                string ipTarget = !string.IsNullOrEmpty(evt.SourceIp) ? evt.SourceIp : null;
+                if (string.IsNullOrEmpty(ipTarget) && !string.IsNullOrEmpty(evt.CallerComputer) && Regex.IsMatch(evt.CallerComputer, @"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$"))
                 {
-                    string ipTarget = evt.SourceIp;
+                    ipTarget = evt.CallerComputer;
+                }
+
+                if (!string.IsNullOrEmpty(ipTarget))
+                {
                     if (!ipMap.ContainsKey(ipTarget))
                     {
                         ipMap[ipTarget] = new CallerComputerItem
@@ -1462,11 +1498,18 @@ namespace DomainLockoutHelper
             }
             _lstNotableIPs.EndUpdate();
 
-            // Background Reverse DNS resolution for Notable IPs
+            // Background Reverse DNS resolution and deduplication for Notable IPs
+            string currentSam = user.SamAccountName;
             ThreadPool.QueueUserWorkItem(state =>
             {
+                List<CallerComputerItem> filteredIpItems = new List<CallerComputerItem>();
+                HashSet<string> seenResolvedShortHosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                bool needsUpdate = false;
+                bool callerMapUpdated = false;
+
                 foreach (var item in ipItems)
                 {
+                    bool skip = false;
                     try
                     {
                         IPAddress addr;
@@ -1476,20 +1519,111 @@ namespace DomainLockoutHelper
                             if (entry != null && !string.IsNullOrEmpty(entry.HostName))
                             {
                                 item.ResolvedHostname = entry.HostName;
+                                needsUpdate = true;
+
+                                string shortHost = entry.HostName.Contains(".") ? entry.HostName.Split('.')[0] : entry.HostName;
+
+                                // 1. Check if resolved hostname short name matches any computer already in callerMap
+                                CallerComputerItem matchingCaller = null;
+                                foreach (var kvp in callerMap)
+                                {
+                                    string cShort = kvp.Key.Contains(".") ? kvp.Key.Split('.')[0] : kvp.Key;
+                                    if (string.Equals(shortHost, cShort, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        matchingCaller = kvp.Value;
+                                        break;
+                                    }
+                                }
+
+                                if (matchingCaller != null)
+                                {
+                                    skip = true;
+                                    matchingCaller.EventCount += item.EventCount;
+                                    if (item.LatestEvent.HasValue && (!matchingCaller.LatestEvent.HasValue || item.LatestEvent > matchingCaller.LatestEvent))
+                                    {
+                                        matchingCaller.LatestEvent = item.LatestEvent;
+                                    }
+                                    if (!matchingCaller.AssociatedIPs.Contains(item.ComputerName))
+                                    {
+                                        matchingCaller.AssociatedIPs.Add(item.ComputerName);
+                                    }
+                                    callerMapUpdated = true;
+                                }
+
+                                // 2. Check if another IP in Notable IPs already resolved to this exact short host
+                                if (!skip)
+                                {
+                                    if (seenResolvedShortHosts.Contains(shortHost))
+                                    {
+                                        skip = true;
+                                    }
+                                    else
+                                    {
+                                        seenResolvedShortHosts.Add(shortHost);
+                                    }
+                                }
                             }
                         }
                     }
                     catch { }
+
+                    if (!skip)
+                    {
+                        filteredIpItems.Add(item);
+                    }
+                    else
+                    {
+                        needsUpdate = true;
+                    }
                 }
 
-                try
+                if (needsUpdate || callerMapUpdated)
                 {
-                    this.BeginInvoke((Action)(() =>
+                    try
                     {
-                        _lstNotableIPs.Refresh();
-                    }));
+                        this.BeginInvoke((Action)(() =>
+                        {
+                            // Verify the user is still selected before updating UI
+                            if (_selectedUser == null || !string.Equals(_selectedUser.SamAccountName, currentSam, StringComparison.OrdinalIgnoreCase))
+                                return;
+
+                            if (callerMapUpdated)
+                            {
+                                int cSel = _lstCallerComputers.SelectedIndex;
+                                _lstCallerComputers.BeginUpdate();
+                                _lstCallerComputers.Items.Clear();
+                                foreach (var cItem in callerMap.Values)
+                                {
+                                    _lstCallerComputers.Items.Add(cItem);
+                                }
+                                _lstCallerComputers.EndUpdate();
+                                if (cSel >= 0 && cSel < _lstCallerComputers.Items.Count)
+                                {
+                                    _lstCallerComputers.SelectedIndex = cSel;
+                                }
+                            }
+
+                            int sel = _lstNotableIPs.SelectedIndex;
+                            _lstNotableIPs.BeginUpdate();
+                            _lstNotableIPs.Items.Clear();
+                            foreach (var item in filteredIpItems)
+                            {
+                                _lstNotableIPs.Items.Add(item);
+                            }
+                            _lstNotableIPs.EndUpdate();
+
+                            if (sel >= 0 && sel < _lstNotableIPs.Items.Count)
+                            {
+                                _lstNotableIPs.SelectedIndex = sel;
+                            }
+                            else if (_lstNotableIPs.Items.Count > 0 && _lstCallerComputers.Items.Count == 0 && _lstNotableIPs.SelectedIndex == -1)
+                            {
+                                _lstNotableIPs.SelectedIndex = 0;
+                            }
+                        }));
+                    }
+                    catch { }
                 }
-                catch { }
             });
 
             if (_lstCallerComputers.Items.Count > 0)
@@ -1650,6 +1784,102 @@ namespace DomainLockoutHelper
             }
         }
 
+        private static Font GetMonospaceFont(float size)
+        {
+            try
+            {
+                Font f = new Font("Consolas", size, FontStyle.Regular);
+                if (f.Name.Equals("Consolas", StringComparison.OrdinalIgnoreCase))
+                    return f;
+            }
+            catch { }
+
+            try
+            {
+                Font f = new Font("Lucida Console", size, FontStyle.Regular);
+                if (f.Name.Equals("Lucida Console", StringComparison.OrdinalIgnoreCase))
+                    return f;
+            }
+            catch { }
+
+            return new Font(FontFamily.GenericMonospace, size, FontStyle.Regular);
+        }
+
+        private static string TruncateOrPad(string value, int length)
+        {
+            if (string.IsNullOrEmpty(value)) return new string(' ', length);
+            if (value.Length > length)
+            {
+                if (length > 3)
+                    return value.Substring(0, length - 2) + "..";
+                return value.Substring(0, length);
+            }
+            return value.PadRight(length);
+        }
+
+        private void HighlightRichText(RichTextBox rtb, bool isDark)
+        {
+            if (rtb == null || string.IsNullOrEmpty(rtb.Text)) return;
+
+            int originalSelectionStart = rtb.SelectionStart;
+            int originalSelectionLength = rtb.SelectionLength;
+
+            Color colHeader = isDark ? Color.FromArgb(56, 189, 248) : Color.FromArgb(30, 58, 138); // sky-400 / blue-900
+            Color colLocked = isDark ? Color.FromArgb(248, 113, 113) : Color.FromArgb(220, 38, 38); // red-400 / red-600
+            Color colUnlocked = isDark ? Color.FromArgb(52, 211, 153) : Color.FromArgb(22, 101, 52); // emerald-400 / emerald-800
+            Color colWarning = isDark ? Color.FromArgb(251, 191, 36) : Color.FromArgb(194, 65, 12); // amber-400 / amber-700
+            Color colMuted = isDark ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139);
+
+            string[] sectionKeywords = new string[] {
+                "[1] ACCOUNT SECURITY PROFILE",
+                "[2] ROOT CAUSE DIAGNOSIS",
+                "[3] CALLER COMPUTERS",
+                "[4] EVENT AUDIT LOG TIMELINE",
+                "CALLER COMPUTER NETWORK & DNS STATUS",
+                "ACTIVE DIRECTORY COMPUTER RECORD"
+            };
+            foreach (string kw in sectionKeywords)
+            {
+                HighlightAllMatches(rtb, kw, colHeader, FontStyle.Bold);
+            }
+
+            HighlightAllMatches(rtb, "YES (CURRENTLY LOCKED)", colLocked, FontStyle.Bold);
+            HighlightAllMatches(rtb, "NO (HISTORICAL RECORD)", colUnlocked, FontStyle.Bold);
+            HighlightAllMatches(rtb, "4740 (ACCOUNT LOCKED)", colLocked, FontStyle.Bold);
+            HighlightAllMatches(rtb, "4767 (ACCOUNT UNLOCKED)", colUnlocked, FontStyle.Bold);
+            HighlightAllMatches(rtb, "4624 (SUCCESSFUL LOGON)", colUnlocked, FontStyle.Regular);
+            HighlightAllMatches(rtb, "4625 (LOGON FAILURE)", colWarning, FontStyle.Regular);
+            HighlightAllMatches(rtb, "4771 (KERBEROS PREAUTH)", colWarning, FontStyle.Regular);
+            HighlightAllMatches(rtb, "4776 (NTLM VALIDATION)", colMuted, FontStyle.Regular);
+            HighlightAllMatches(rtb, "4724 (ADMIN RESET)", colHeader, FontStyle.Regular);
+
+            HighlightAllMatches(rtb, "0xC000006A (Bad Password)", colWarning, FontStyle.Bold);
+            HighlightAllMatches(rtb, "0xC0000234 (Account Locked Out)", colLocked, FontStyle.Bold);
+
+            rtb.Select(0, 0);
+        }
+
+        private static void HighlightAllMatches(RichTextBox rtb, string searchStr, Color color, FontStyle style)
+        {
+            if (string.IsNullOrEmpty(searchStr)) return;
+            int index = 0;
+            while ((index = rtb.Find(searchStr, index, RichTextBoxFinds.None)) >= 0)
+            {
+                rtb.SelectionStart = index;
+                rtb.SelectionLength = searchStr.Length;
+                rtb.SelectionColor = color;
+                if (style != FontStyle.Regular && rtb.Font != null)
+                {
+                    try
+                    {
+                        rtb.SelectionFont = new Font(rtb.Font, style);
+                    }
+                    catch { }
+                }
+                index += searchStr.Length;
+            }
+        }
+
         private void RenderAccountDetails(UserRecord u, IEnumerable<string> callers)
         {
             string callerStr = string.Join(", ", callers);
@@ -1728,25 +1958,28 @@ namespace DomainLockoutHelper
 
             System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
-            // 1. Account Security Profile & Timestamps
-            sb.AppendLine("ACCOUNT SECURITY PROFILE & TIMESTAMPS");
-            sb.AppendLine("=====================================");
-            sb.AppendLine(string.Format("Username:                 {0}", u.SamAccountName));
-            sb.AppendLine(string.Format("Display Name:             {0}", u.DisplayName));
-            sb.AppendLine(string.Format("UPN:                      {0}", string.IsNullOrEmpty(u.UserPrincipalName) ? u.SamAccountName : u.UserPrincipalName));
-            sb.AppendLine(string.Format("Email:                    {0}", string.IsNullOrEmpty(u.EmailAddress) ? "(not set)" : u.EmailAddress));
-            sb.AppendLine(string.Format("Department:               {0}", string.IsNullOrEmpty(u.Department) ? "(not set)" : u.Department));
-            sb.AppendLine(string.Format("Title:                    {0}", string.IsNullOrEmpty(u.Title) ? "(not set)" : u.Title));
-            sb.AppendLine(string.Format("Active / Enabled:         Yes (Disabled accounts excluded)"));
-            sb.AppendLine(string.Format("CURRENTLY LOCKED:         {0}", u.IsCurrentlyLocked ? "YES (CURRENTLY LOCKED)" : "NO (HISTORICAL RECORD)"));
-            sb.AppendLine(string.Format("Bad Password Count:       {0}", u.BadPasswordCount));
-            sb.AppendLine(string.Format("Last Bad Password Time:   {0}", u.LastBadPasswordAttempt.HasValue ? u.LastBadPasswordAttempt.Value.ToString("yyyy-MM-dd HH:mm:ss") : "(not recorded)"));
-            sb.AppendLine(string.Format("Last Successful Logon:    {0}", u.LastLogonTimestamp.HasValue ? u.LastLogonTimestamp.Value.ToString("yyyy-MM-dd HH:mm:ss") : "(not recorded)"));
+            // 1. Account Security Profile & Timestamps Table
+            sb.AppendLine("========================================================================================");
+            sb.AppendLine(" [1] ACCOUNT SECURITY PROFILE & AD ATTRIBUTES");
+            sb.AppendLine("========================================================================================");
+            sb.AppendLine("  FIELD                      | CURRENT AD VALUE");
+            sb.AppendLine("-----------------------------+----------------------------------------------------------");
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Username", u.SamAccountName));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Display Name", u.DisplayName));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "UPN", string.IsNullOrEmpty(u.UserPrincipalName) ? u.SamAccountName : u.UserPrincipalName));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Email", string.IsNullOrEmpty(u.EmailAddress) ? "(not set)" : u.EmailAddress));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Department", string.IsNullOrEmpty(u.Department) ? "(not set)" : u.Department));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Title", string.IsNullOrEmpty(u.Title) ? "(not set)" : u.Title));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Account State", "Active / Enabled (Disabled accounts excluded)"));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "CURRENT LOCKOUT", u.IsCurrentlyLocked ? "YES (CURRENTLY LOCKED)" : "NO (HISTORICAL RECORD)"));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Bad Password Count", u.BadPasswordCount));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Last Bad Password Time", u.LastBadPasswordAttempt.HasValue ? u.LastBadPasswordAttempt.Value.ToString("yyyy-MM-dd HH:mm:ss") : "(not recorded)"));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Last Successful Logon", u.LastLogonTimestamp.HasValue ? u.LastLogonTimestamp.Value.ToString("yyyy-MM-dd HH:mm:ss") : "(not recorded)"));
 
             string pwdAgeStr;
             if (u.MustChangePasswordAtNextLogon)
             {
-                pwdAgeStr = "MUST CHANGE PASSWORD AT NEXT LOGON (Immediate service/Wi-Fi lockout hazard!)";
+                pwdAgeStr = "MUST CHANGE PASSWORD AT NEXT LOGON (Immediate lockout hazard!)";
             }
             else if (u.PasswordLastSet.HasValue)
             {
@@ -1760,19 +1993,18 @@ namespace DomainLockoutHelper
             {
                 pwdAgeStr = "(not recorded)";
             }
-            sb.AppendLine(string.Format("Password Last Changed:    {0}", pwdAgeStr));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Password Last Changed", pwdAgeStr));
 
             string pwdExpStr = u.PasswordNeverExpires
                 ? "Never (Password Never Expires enabled)"
                 : (u.AccountExpires.HasValue ? string.Format("Account expires: {0:yyyy-MM-dd}", u.AccountExpires.Value) : "Subject to Active Directory Domain Policy");
-            sb.AppendLine(string.Format("Password Expiry Status:   {0}", pwdExpStr));
-            sb.AppendLine(string.Format("Account Expiration:       {0}", u.AccountExpires.HasValue ? u.AccountExpires.Value.ToString("yyyy-MM-dd HH:mm:ss") : "Never"));
-            sb.AppendLine(string.Format("Primary Security Groups:  {0}", (u.MemberOfGroups != null && u.MemberOfGroups.Count > 0) ? string.Join(", ", u.MemberOfGroups.ToArray()) : "(none or Domain Users)"));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Password Expiry Status", pwdExpStr));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Account Expiration", u.AccountExpires.HasValue ? u.AccountExpires.Value.ToString("yyyy-MM-dd HH:mm:ss") : "Never"));
 
             string policyDesc = !string.IsNullOrEmpty(u.ResultantPSO)
                 ? string.Format("Fine-Grained Password Policy (PSO: '{0}')", u.ResultantPSO)
                 : "Default Domain Password Policy";
-            sb.AppendLine(string.Format("Password Policy:          {0}", policyDesc));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Password Policy (PSO)", policyDesc));
 
             // Check for previous unlock events (Event 4767) vs Automatic Policy Timer Expiration (FGPP / Domain)
             LockoutEventItem latestUnlock = u.Events.Find(ev => ev.EventId == 4767);
@@ -1780,38 +2012,42 @@ namespace DomainLockoutHelper
 
             if (latestUnlock != null)
             {
-                sb.AppendLine(string.Format("Last Unlocked By:         {0} ({1:yyyy-MM-dd HH:mm:ss} on DC {2})",
+                sb.AppendLine(string.Format("  {0,-26} | {1} ({2:yyyy-MM-dd HH:mm:ss} on DC {3})",
+                    "Last Unlocked By",
                     string.IsNullOrEmpty(latestUnlock.UnlockedBy) ? "(Administrator not recorded)" : latestUnlock.UnlockedBy,
                     latestUnlock.TimeCreated,
                     latestUnlock.DomainController));
-                sb.AppendLine("Unlock Resolution:        Manual Administrator Action (Security Event 4767)");
+                sb.AppendLine(string.Format("  {0,-26} | {1}", "Unlock Resolution", "Manual Administrator Action (Security Event 4767)"));
             }
             else if (!u.IsCurrentlyLocked && latestLockout != null)
             {
-                sb.AppendLine("Last Unlocked By:         (No 4767 unlock events in cached Security log)");
-                sb.AppendLine(string.Format("Unlock Resolution:        AUTOMATIC UNLOCK via {0} (Lockout duration timer expired)",
+                sb.AppendLine(string.Format("  {0,-26} | {1}", "Last Unlocked By", "(No 4767 unlock events in cached Security log)"));
+                sb.AppendLine(string.Format("  {0,-26} | AUTOMATIC UNLOCK via {1} (Lockout duration timer expired)",
+                    "Unlock Resolution",
                     !string.IsNullOrEmpty(u.ResultantPSO) ? ("FGPP '" + u.ResultantPSO + "'") : "Domain Policy"));
             }
             else
             {
-                sb.AppendLine("Last Unlocked By:         (No 4767 unlock events in cached Security log)");
+                sb.AppendLine(string.Format("  {0,-26} | {1}", "Last Unlocked By", "(No 4767 unlock events in cached Security log)"));
             }
 
-            // Post-Unlock Logon Status (correlating security event log and LDAP last logon with latest lockout event)
+            // Post-Unlock Logon Status
             if (latestLockout != null)
             {
                 LockoutEventItem postUnlockEvt = u.Events.Find(ev => ev.EventId == 4624 && ev.TimeCreated > latestLockout.TimeCreated);
                 if (postUnlockEvt != null)
                 {
-                    sb.AppendLine(string.Format("Post-Unlock Logon:        YES - Successful logon event recorded at {0:yyyy-MM-dd HH:mm:ss} (Security Log Event 4624)", postUnlockEvt.TimeCreated));
+                    sb.AppendLine(string.Format("  {0,-26} | YES - Domain logon confirmed at {1:yyyy-MM-dd HH:mm:ss} (DC Event 4624 on {2})", "Post-Unlock Logon", postUnlockEvt.TimeCreated, postUnlockEvt.DomainController));
                 }
                 else if (u.LastLogonTimestamp.HasValue && u.LastLogonTimestamp.Value > latestLockout.TimeCreated)
                 {
-                    sb.AppendLine(string.Format("Post-Unlock Logon (AD):   YES - User logged on at {0:yyyy-MM-dd HH:mm:ss} (Active Directory confirmed)", u.LastLogonTimestamp.Value));
+                    sb.AppendLine(string.Format("  {0,-26} | YES - Domain logon confirmed at {1:yyyy-MM-dd HH:mm:ss} (Active Directory confirmed)", "Post-Unlock Logon (AD)", u.LastLogonTimestamp.Value));
                 }
                 else
                 {
-                    sb.AppendLine(string.Format("Post-Unlock Logon:        NO - No successful domain logons recorded since latest lockout ({0:yyyy-MM-dd HH:mm:ss})", latestLockout.TimeCreated));
+                    sb.AppendLine(string.Format("  {0,-26} | NO - No domain logons recorded since latest lockout ({1:yyyy-MM-dd HH:mm:ss})", "Post-Unlock Logon (AD)", latestLockout.TimeCreated));
+                    sb.AppendLine(string.Format("  {0,-26} | [NOTE]: Screen unlocks validate locally via cached Kerberos TGT and", ""));
+                    sb.AppendLine(string.Format("  {0,-26} | do not query DCs. AD lastLogonTimestamp replicates only every 9-14 days.", ""));
                 }
             }
 
@@ -1819,33 +2055,62 @@ namespace DomainLockoutHelper
             int unlockCount = 0;
             int failureCount = 0;
             int successCount = 0;
+            int ntlmCount = 0;
+            int resetCount = 0;
             foreach (var ev in u.Events)
             {
                 if (ev.EventId == 4767) unlockCount++;
                 else if (ev.EventId == 4740) lockoutCount++;
                 else if (ev.EventId == 4625 || ev.EventId == 4771) failureCount++;
                 else if (ev.EventId == 4624) successCount++;
+                else if (ev.EventId == 4776) ntlmCount++;
+                else if (ev.EventId == 4724) resetCount++;
             }
-            sb.AppendLine(string.Format("Lockout Events (4740):    {0}", lockoutCount));
-            sb.AppendLine(string.Format("Unlock Events (4767):     {0}", unlockCount));
+            sb.AppendLine("-----------------------------+----------------------------------------------------------");
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Lockout Events (4740)", lockoutCount));
+            sb.AppendLine(string.Format("  {0,-26} | {1}", "Unlock Events (4767)", unlockCount));
             if (failureCount > 0)
-                sb.AppendLine(string.Format("Logon Failures (4625/4771):{0}", failureCount));
+                sb.AppendLine(string.Format("  {0,-26} | {1}", "Logon Failures (4625/4771)", failureCount));
+            if (ntlmCount > 0)
+                sb.AppendLine(string.Format("  {0,-26} | {1}", "NTLM Validations (4776)", ntlmCount));
+            if (resetCount > 0)
+                sb.AppendLine(string.Format("  {0,-26} | {1}", "Password Resets (4724)", resetCount));
             if (successCount > 0)
-                sb.AppendLine(string.Format("Successful Logons (4624): {0}", successCount));
+                sb.AppendLine(string.Format("  {0,-26} | {1}", "Successful Logons (4624)", successCount));
+            sb.AppendLine("-----------------------------+----------------------------------------------------------");
+
+            if (u.MemberOfGroups != null && u.MemberOfGroups.Count > 0)
+            {
+                sb.AppendLine(string.Format("  Primary Security Groups ({0}):", u.MemberOfGroups.Count));
+                foreach (string grp in u.MemberOfGroups)
+                {
+                    sb.AppendLine(string.Format("    * {0}", grp));
+                }
+            }
+            else
+            {
+                sb.AppendLine(string.Format("  {0,-26} | {1}", "Primary Security Groups", "(none or Domain Users)"));
+            }
             sb.AppendLine();
 
             // 2. Root Cause Diagnosis & Action Plan
-            sb.AppendLine("ROOT CAUSE DIAGNOSIS");
-            sb.AppendLine("====================");
-            sb.AppendLine("Likely Cause: " + rootCause);
+            sb.AppendLine("========================================================================================");
+            sb.AppendLine(" [2] ROOT CAUSE DIAGNOSIS & REMEDIATION PLAN");
+            sb.AppendLine("========================================================================================");
+            sb.AppendLine("  LIKELY CAUSE:");
+            sb.AppendLine("  " + rootCause);
             sb.AppendLine();
-            sb.AppendLine("Remediation Action Plan:");
-            sb.AppendLine(remediation);
+            sb.AppendLine("  REMEDIATION ACTION PLAN:");
+            foreach (string rLine in remediation.Split(new string[] { "\r\n", "\n" }, StringSplitOptions.None))
+            {
+                sb.AppendLine("  " + rLine);
+            }
             sb.AppendLine();
 
             // 3. Caller Computers & Source Devices
-            sb.AppendLine("CALLER COMPUTERS & SOURCE DEVICES");
-            sb.AppendLine("=================================");
+            sb.AppendLine("========================================================================================");
+            sb.AppendLine(" [3] CALLER COMPUTERS & SOURCE DEVICES");
+            sb.AppendLine("========================================================================================");
             if (callers != null)
             {
                 int cCount = 0;
@@ -1854,98 +2119,97 @@ namespace DomainLockoutHelper
                     cCount++;
                     bool isIp = Regex.IsMatch(c, @"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$");
                     if (isIp)
-                        sb.AppendLine(string.Format("* {0}  [Client Source IP - captured from Event 4625 / 4771]", c));
+                        sb.AppendLine(string.Format("  * {0,-20} [Client Source IP - captured from Event 4625 / 4771]", c));
                     else
-                        sb.AppendLine(string.Format("* {0}  [Calling Hostname - reported in Event 4740 / 4625]", c));
+                        sb.AppendLine(string.Format("  * {0,-20} [Calling Hostname - reported in Event 4740 / 4625]", c));
                 }
-                if (cCount == 0) sb.AppendLine("(None recorded in Security logs)");
+                if (cCount == 0) sb.AppendLine("  (None recorded in Security logs - authentications routed through domain controllers)");
             }
             else
             {
-                sb.AppendLine("(None recorded in Security logs)");
+                sb.AppendLine("  (None recorded in Security logs - authentications routed through domain controllers)");
             }
             sb.AppendLine();
 
-            // 4. Event Audit Log Timeline (Lockout 4740, Unlock 4767, Logon Failure 4625, Kerberos 4771, Logon Success 4624)
-            sb.AppendLine("EVENT AUDIT LOG TIMELINE");
-            sb.AppendLine("========================");
+            // 4. Event Audit Log Timeline
+            sb.AppendLine("========================================================================================");
+            sb.AppendLine(" [4] EVENT AUDIT LOG TIMELINE (CHRONOLOGICAL FORENSIC EVENTS)");
+            sb.AppendLine("========================================================================================");
             if (u.Events.Count == 0)
             {
-                sb.AppendLine("No recent 4740 lockout, 4767 unlock, or 4625 failure events cached from online DCs.");
+                sb.AppendLine("  No recent 4740 lockout, 4767 unlock, or 4625/4776 failure events cached from online DCs.");
             }
             else
             {
+                sb.AppendLine("  DATE & TIME         | EVENT ID & TYPE         | CALLER / IP / WORKSTATION | STATUS / RESULT / CODE         | DOMAIN CONTROLLER");
+                sb.AppendLine("----------------------+-------------------------+---------------------------+--------------------------------+------------------------");
+
                 foreach (var evt in u.Events)
                 {
+                    string dateStr = evt.TimeCreated.ToString("yyyy-MM-dd HH:mm:ss");
+                    string eventTypeStr = "";
+                    string hostOrIpStr = "";
+                    string statusStr = "";
+                    string dcStr = evt.DomainController ?? "";
+
                     if (evt.EventId == 4767)
                     {
-                        sb.AppendLine(string.Format("{0:yyyy-MM-dd HH:mm:ss} | Event 4767 (ACCOUNT UNLOCKED) | Unlocked By: {1} | DC: {2} | Record: {3}",
-                            evt.TimeCreated,
-                            string.IsNullOrEmpty(evt.UnlockedBy) ? "(Administrator not recorded)" : evt.UnlockedBy,
-                            evt.DomainController,
-                            evt.RecordId));
+                        eventTypeStr = "4767 (ACCOUNT UNLOCKED)";
+                        hostOrIpStr = !string.IsNullOrEmpty(evt.UnlockedBy) ? evt.UnlockedBy : "(Admin unrecorded)";
+                        statusStr = string.Format("Unlocked manually (Rec:{0})", evt.RecordId);
                     }
                     else if (evt.EventId == 4740)
                     {
-                        sb.AppendLine(string.Format("{0:yyyy-MM-dd HH:mm:ss} | Event 4740 (ACCOUNT LOCKED)   | Caller: {1} | DC: {2} | Record: {3}",
-                            evt.TimeCreated,
-                            string.IsNullOrEmpty(evt.CallerComputer) ? "(Caller computer not recorded)" : evt.CallerComputer,
-                            evt.DomainController,
-                            evt.RecordId));
+                        eventTypeStr = "4740 (ACCOUNT LOCKED)";
+                        hostOrIpStr = !string.IsNullOrEmpty(evt.CallerComputer) ? evt.CallerComputer : "(Not recorded in 4740)";
+                        statusStr = string.Format("Account Locked Out (Rec:{0})", evt.RecordId);
                     }
                     else if (evt.EventId == 4625)
                     {
-                        string ipInfo = !string.IsNullOrEmpty(evt.SourceIp) ? evt.SourceIp : "(IP not recorded)";
-                        string wsInfo = !string.IsNullOrEmpty(evt.CallerComputer) ? evt.CallerComputer : "(Workstation not recorded)";
-                        sb.AppendLine(string.Format("{0:yyyy-MM-dd HH:mm:ss} | Event 4625 (LOGON FAILURE)    | Source IP: {1} | Workstation: {2} | {3} | SubStatus: {4} | DC: {5}",
-                            evt.TimeCreated,
-                            ipInfo,
-                            wsInfo,
-                            !string.IsNullOrEmpty(evt.LogonType) ? evt.LogonType : "Network (3)",
-                            !string.IsNullOrEmpty(evt.StatusOrCode) ? evt.StatusOrCode : "0xC000006A (Bad Password)",
-                            evt.DomainController));
+                        eventTypeStr = "4625 (LOGON FAILURE)";
+                        string ip = !string.IsNullOrEmpty(evt.SourceIp) ? evt.SourceIp : "";
+                        string ws = !string.IsNullOrEmpty(evt.CallerComputer) ? evt.CallerComputer : "";
+                        hostOrIpStr = !string.IsNullOrEmpty(ip) ? (ip + (!string.IsNullOrEmpty(ws) ? (" (" + ws + ")") : "")) : (!string.IsNullOrEmpty(ws) ? ws : "(IP not recorded)");
+                        statusStr = !string.IsNullOrEmpty(evt.StatusOrCode) ? evt.StatusOrCode : "0xC000006A (Bad Password)";
                     }
                     else if (evt.EventId == 4771)
                     {
-                        string ipInfo = !string.IsNullOrEmpty(evt.SourceIp) ? evt.SourceIp : "(IP not recorded)";
-                        sb.AppendLine(string.Format("{0:yyyy-MM-dd HH:mm:ss} | Event 4771 (KERBEROS PREAUTH)  | Client IP: {1} | Code: {2} | DC: {3}",
-                            evt.TimeCreated,
-                            ipInfo,
-                            !string.IsNullOrEmpty(evt.StatusOrCode) ? evt.StatusOrCode : "0x18 (Pre-Auth Failed)",
-                            evt.DomainController));
+                        eventTypeStr = "4771 (KERBEROS PREAUTH)";
+                        hostOrIpStr = !string.IsNullOrEmpty(evt.SourceIp) ? evt.SourceIp : "(IP not recorded)";
+                        statusStr = !string.IsNullOrEmpty(evt.StatusOrCode) ? evt.StatusOrCode : "0x18 (Pre-Auth Failed)";
                     }
                     else if (evt.EventId == 4776)
                     {
-                        string wsInfo = !string.IsNullOrEmpty(evt.CallerComputer) ? evt.CallerComputer : "(Workstation not recorded)";
-                        sb.AppendLine(string.Format("{0:yyyy-MM-dd HH:mm:ss} | Event 4776 (NTLM VALIDATION)    | Workstation: {1} | Status: {2} | DC: {3}",
-                            evt.TimeCreated,
-                            wsInfo,
-                            !string.IsNullOrEmpty(evt.StatusOrCode) ? evt.StatusOrCode : "Validated",
-                            evt.DomainController));
+                        eventTypeStr = "4776 (NTLM VALIDATION)";
+                        hostOrIpStr = !string.IsNullOrEmpty(evt.CallerComputer) ? evt.CallerComputer : "(Workstation unrecorded)";
+                        statusStr = !string.IsNullOrEmpty(evt.StatusOrCode) ? evt.StatusOrCode : "Validated";
                     }
                     else if (evt.EventId == 4724)
                     {
-                        sb.AppendLine(string.Format("{0:yyyy-MM-dd HH:mm:ss} | Event 4724 (ADMIN PASSWORD RESET) | Admin: {1} | DC: {2} | Record: {3}",
-                            evt.TimeCreated,
-                            string.IsNullOrEmpty(evt.UnlockedBy) ? "(Administrator not recorded)" : evt.UnlockedBy,
-                            evt.DomainController,
-                            evt.RecordId));
+                        eventTypeStr = "4724 (ADMIN RESET)";
+                        hostOrIpStr = !string.IsNullOrEmpty(evt.UnlockedBy) ? evt.UnlockedBy : "(Admin unrecorded)";
+                        statusStr = string.Format("Password Reset by Admin (Rec:{0})", evt.RecordId);
                     }
                     else if (evt.EventId == 4624)
                     {
-                        string ipInfo = !string.IsNullOrEmpty(evt.SourceIp) ? evt.SourceIp : "(IP not recorded)";
-                        string wsInfo = !string.IsNullOrEmpty(evt.CallerComputer) ? evt.CallerComputer : "(Workstation not recorded)";
-                        sb.AppendLine(string.Format("{0:yyyy-MM-dd HH:mm:ss} | Event 4624 (SUCCESSFUL LOGON) | Workstation: {1} | IP: {2} | {3} | DC: {4}",
-                            evt.TimeCreated,
-                            wsInfo,
-                            ipInfo,
-                            !string.IsNullOrEmpty(evt.LogonType) ? evt.LogonType : "Interactive",
-                            evt.DomainController));
+                        eventTypeStr = "4624 (SUCCESSFUL LOGON)";
+                        string ip = !string.IsNullOrEmpty(evt.SourceIp) ? evt.SourceIp : "";
+                        string ws = !string.IsNullOrEmpty(evt.CallerComputer) ? evt.CallerComputer : "";
+                        hostOrIpStr = !string.IsNullOrEmpty(ws) ? (ws + (!string.IsNullOrEmpty(ip) ? (" (" + ip + ")") : "")) : (!string.IsNullOrEmpty(ip) ? ip : "(Interactive)");
+                        statusStr = string.Format("Logon OK ({0})", !string.IsNullOrEmpty(evt.LogonType) ? evt.LogonType : "Interactive");
                     }
+
+                    sb.AppendLine(string.Format("  {0,-19} | {1,-23} | {2,-25} | {3,-30} | {4}",
+                        dateStr,
+                        TruncateOrPad(eventTypeStr, 23),
+                        TruncateOrPad(hostOrIpStr, 25),
+                        TruncateOrPad(statusStr, 30),
+                        dcStr));
                 }
             }
 
             _rtbAccountDetails.Text = sb.ToString();
+            HighlightRichText(_rtbAccountDetails, _isDarkMode);
             _statusLabel.Text = string.Format("Selected {0}. Choose a caller computer in the middle column to inspect network status and sessions.", u.SamAccountName);
         }
 
@@ -1991,19 +2255,35 @@ namespace DomainLockoutHelper
                 CallerComputerItem ipItem = _lstNotableIPs.SelectedItem as CallerComputerItem;
                 if (ipItem == null) return;
 
-                _selectedComputer = ipItem.ComputerName;
-                _btnRebootComputer.Enabled = false;
-                _lvSessions.Items.Clear();
-                _btnLogoffUser.Enabled = false;
+                // Determine target for QUSER / AD inspection: use resolved hostname if valid, else IP address
+                string targetHost = ipItem.ComputerName;
+                if (!string.IsNullOrEmpty(ipItem.ResolvedHostname) && !ipItem.ResolvedHostname.StartsWith("("))
+                {
+                    targetHost = ipItem.ResolvedHostname.Contains(".") ? ipItem.ResolvedHostname.Split('.')[0] : ipItem.ResolvedHostname;
+                }
 
-                RenderComputerAdDetails(_selectedComputer);
-                _statusLabel.Text = string.Format("Selected Notable IP {0}. QUSER remote session query skipped for IP address.", ipItem.ComputerName);
+                _selectedComputer = targetHost;
+                _btnRebootComputer.Enabled = true;
+
+                RenderComputerAdDetails(ipItem.ComputerName);
+                QueryQUserAsync(_selectedComputer);
+                _statusLabel.Text = string.Format("Selected Notable IP {0} (Targeting: {1}). Querying QUSER session status...", ipItem.ComputerName, _selectedComputer);
             }
         }
 
         private void RenderComputerAdDetails(string computerName)
         {
             _rtbComputerDetails.Text = string.Format("Querying network status, DNS, and reverse PTR lookup for '{0}'...", computerName);
+
+            List<string> associatedIps = null;
+            if (_lstCallerComputers != null && _lstCallerComputers.SelectedItem != null)
+            {
+                CallerComputerItem curComp = _lstCallerComputers.SelectedItem as CallerComputerItem;
+                if (curComp != null && curComp.AssociatedIPs != null && curComp.AssociatedIPs.Count > 0)
+                {
+                    associatedIps = new List<string>(curComp.AssociatedIPs);
+                }
+            }
 
             ThreadPool.QueueUserWorkItem(state =>
             {
@@ -2092,21 +2372,108 @@ namespace DomainLockoutHelper
                     }
 
                     string infrastructureNote = isIpInput
-                        ? "\r\n[INFRASTRUCTURE / SERVER NOTICE]:\r\n  This item represents a network IP address (e.g. ACM server, firewall, RADIUS, or network appliance). QUSER session queries are skipped for IP infrastructure as remote session management only applies to Windows workstations."
-                        : "\r\nActive and disconnected user sessions on this machine can be queried on the right panel via QUSER.";
+                        ? "\r\n\r\n[INFRASTRUCTURE / ENDPOINT NOTICE]:\r\n  This item represents a network IP address (e.g., firewall, RADIUS server, VPN gateway, or network appliance). QUSER session queries are skipped for IP infrastructure as remote session management only applies to Windows workstations."
+                        : "\r\n\r\nActive and disconnected user sessions on this machine can be queried on the right panel via QUSER.";
+
+                    // 3. Active Directory Computer Object Inspection (Classification & Operating System)
+                    string adComputerInfo = "";
+                    string compLookupName = isIpInput
+                        ? (!string.IsNullOrEmpty(resolvedHostname) && !resolvedHostname.StartsWith("(") && resolvedHostname.Contains(".") ? resolvedHostname.Split('.')[0] : resolvedHostname)
+                        : (targetHost.Contains(".") ? targetHost.Split('.')[0] : targetHost);
+
+                    if (!string.IsNullOrEmpty(compLookupName) && !Regex.IsMatch(compLookupName, @"^\d+\.\d+\.\d+\.\d+$") && !compLookupName.StartsWith("("))
+                    {
+                        try
+                        {
+                            string adDomain = !string.IsNullOrEmpty(_domainName) && !_domainName.Equals("Unknown", StringComparison.OrdinalIgnoreCase) ? _domainName : Environment.GetEnvironmentVariable("USERDNSDOMAIN");
+                            using (DirectoryEntry root = new DirectoryEntry("LDAP://" + (adDomain ?? "")))
+                            using (DirectorySearcher searcher = new DirectorySearcher(root))
+                            {
+                                searcher.Filter = string.Format("(&(objectCategory=computer)(sAMAccountName={0}$))", compLookupName);
+                                searcher.PropertiesToLoad.Add("operatingSystem");
+                                searcher.PropertiesToLoad.Add("operatingSystemVersion");
+                                searcher.PropertiesToLoad.Add("description");
+                                searcher.PropertiesToLoad.Add("distinguishedName");
+                                searcher.SearchScope = SearchScope.Subtree;
+                                searcher.ClientTimeout = TimeSpan.FromSeconds(2);
+                                searcher.ServerTimeLimit = TimeSpan.FromSeconds(2);
+
+                                SearchResult sr = searcher.FindOne();
+                                if (sr != null)
+                                {
+                                    string os = sr.Properties.Contains("operatingSystem") && sr.Properties["operatingSystem"].Count > 0 ? sr.Properties["operatingSystem"][0].ToString() : "Windows (Unknown Version)";
+                                    string osVer = sr.Properties.Contains("operatingSystemVersion") && sr.Properties["operatingSystemVersion"].Count > 0 ? sr.Properties["operatingSystemVersion"][0].ToString() : "";
+                                    string desc = sr.Properties.Contains("description") && sr.Properties["description"].Count > 0 ? sr.Properties["description"][0].ToString() : "(None)";
+                                    string dn = sr.Properties.Contains("distinguishedName") && sr.Properties["distinguishedName"].Count > 0 ? sr.Properties["distinguishedName"][0].ToString() : "";
+
+                                    bool isServer = Regex.IsMatch(os, "(?i)server");
+                                    string deviceCategory = isServer ? "Windows Server" : "Windows Workstation / Client";
+
+                                    string ouPath = "(Domain Root)";
+                                    int firstOu = dn.IndexOf("OU=", StringComparison.OrdinalIgnoreCase);
+                                    if (firstOu >= 0)
+                                    {
+                                        ouPath = dn.Substring(firstOu);
+                                    }
+
+                                    adComputerInfo = string.Format(
+                                        "\r\n\r\n========================================================================================\r\n" +
+                                        " ACTIVE DIRECTORY COMPUTER RECORD\r\n" +
+                                        "========================================================================================\r\n" +
+                                        "  FIELD                      | VALUE\r\n" +
+                                        "-----------------------------+----------------------------------------------------------\r\n" +
+                                        "  {0,-26} | {1}\r\n" +
+                                        "  {2,-26} | {3} {4}\r\n" +
+                                        "  {5,-26} | {6}\r\n" +
+                                        "  {7,-26} | {8}\r\n" +
+                                        "-----------------------------+----------------------------------------------------------",
+                                        "Device Classification", deviceCategory,
+                                        "Operating System", os, osVer,
+                                        "Organizational Unit", ouPath,
+                                        "Description", desc);
+                                }
+                                else
+                                {
+                                    adComputerInfo = 
+                                        "\r\n\r\n========================================================================================\r\n" +
+                                        " ACTIVE DIRECTORY COMPUTER RECORD\r\n" +
+                                        "========================================================================================\r\n" +
+                                        "  FIELD                      | VALUE\r\n" +
+                                        "-----------------------------+----------------------------------------------------------\r\n" +
+                                        "  AD Computer Object         | Not found in Active Directory\r\n" +
+                                        "  Device Classification      | Non-domain endpoint (Linux, Chromebook, mobile, or appliance)\r\n" +
+                                        "-----------------------------+----------------------------------------------------------";
+                                }
+                            }
+                        }
+                        catch { }
+                    }
+
+                    string associatedIpLine = "";
+                    if (associatedIps != null && associatedIps.Count > 0)
+                    {
+                        associatedIpLine = string.Format("\r\n  {0,-26} | {1}", "Associated Client IPs", string.Join(", ", associatedIps.ToArray()));
+                    }
 
                     infoText = string.Format(
-                        "CALLER COMPUTER NETWORK & DNS STATUS\r\n" +
-                        "------------------------------------\r\n" +
-                        "Selected Target:      {0}\r\n" +
-                        "Resolved Hostname:    {1}\r\n" +
-                        "Resolved IPv4:        {2}\r\n" +
-                        "Network Reachability: {3}{4}",
-                        computerName,
-                        resolvedHostname,
-                        resolvedIp,
-                        pingStatus,
-                        infrastructureNote);
+                        "========================================================================================\r\n" +
+                        " CALLER COMPUTER NETWORK & DNS STATUS\r\n" +
+                        "========================================================================================\r\n" +
+                        "  FIELD                      | VALUE\r\n" +
+                        "-----------------------------+----------------------------------------------------------\r\n" +
+                        "  {0,-26} | {1}\r\n" +
+                        "  {2,-26} | {3}\r\n" +
+                        "  {4,-26} | {5}{6}\r\n" +
+                        "  {7,-26} | {8}\r\n" +
+                        "-----------------------------+----------------------------------------------------------" +
+                        "{9}{10}",
+                        "Selected Target", computerName,
+                        "Resolved Hostname", resolvedHostname,
+                        "Resolved IPv4", resolvedIp,
+                        associatedIpLine,
+                        "Network Reachability", pingStatus,
+                        infrastructureNote,
+                        adComputerInfo);
                 }
                 catch (Exception ex)
                 {
@@ -2116,6 +2483,7 @@ namespace DomainLockoutHelper
                 this.BeginInvoke((Action)(() =>
                 {
                     _rtbComputerDetails.Text = infoText;
+                    HighlightRichText(_rtbComputerDetails, _isDarkMode);
                 }));
             });
         }
@@ -2416,8 +2784,15 @@ namespace DomainLockoutHelper
                             if (user != null)
                             {
                                 user.SetPassword(newPassword);
+                                if (dlg.MustChangePasswordAtNextLogon)
+                                {
+                                    user.ExpirePasswordNow();
+                                }
                                 user.Save();
-                                MessageBox.Show(string.Format("The password for '{0}' was reset successfully in Active Directory.", sam), "Password Reset Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                MessageBox.Show(string.Format("The password for '{0}' was reset successfully in Active Directory.{1}",
+                                    sam,
+                                    dlg.MustChangePasswordAtNextLogon ? "\r\n(User must change password at next logon)." : ""),
+                                    "Password Reset Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
                             }
                             else
                             {
@@ -2439,6 +2814,13 @@ namespace DomainLockoutHelper
         private void RebootComputerClick(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(_selectedComputer)) return;
+
+            bool isIp = Regex.IsMatch(_selectedComputer, @"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$") || _selectedComputer.StartsWith("IP: ", StringComparison.OrdinalIgnoreCase);
+            if (isIp)
+            {
+                MessageBox.Show("Remote reboot cannot be executed against IP address infrastructure targets. Select a managed Windows workstation or server.", "Reboot Skipped", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
 
             int activeCount = _lvSessions.Items.Count;
             string warning = string.Format(
@@ -2618,12 +3000,14 @@ namespace DomainLockoutHelper
     {
         private TextBox _txtPassword;
         private CheckBox _chkShow;
+        private CheckBox _chkMustChange;
         public string Password { get { return _txtPassword.Text; } }
+        public bool MustChangePasswordAtNextLogon { get { return _chkMustChange.Checked; } }
 
         public PasswordPromptForm(string accountName)
         {
             this.Text = "Set New Password - " + accountName;
-            this.Size = new Size(460, 195);
+            this.Size = new Size(460, 235);
             this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.StartPosition = FormStartPosition.CenterParent;
             this.MaximizeBox = false;
@@ -2649,17 +3033,24 @@ namespace DomainLockoutHelper
             _chkShow.CheckedChanged += (s, e) => _txtPassword.UseSystemPasswordChar = !_chkShow.Checked;
             this.Controls.Add(_chkShow);
 
+            _chkMustChange = new CheckBox();
+            _chkMustChange.Text = "User must change password at next logon";
+            _chkMustChange.Location = new Point(18, 104);
+            _chkMustChange.AutoSize = true;
+            _chkMustChange.Checked = true;
+            this.Controls.Add(_chkMustChange);
+
             Button btnOk = new Button();
             btnOk.Text = "OK";
             btnOk.DialogResult = DialogResult.OK;
-            btnOk.Location = new Point(255, 115);
+            btnOk.Location = new Point(255, 145);
             btnOk.Size = new Size(80, 32);
             this.Controls.Add(btnOk);
 
             Button btnCancel = new Button();
             btnCancel.Text = "Cancel";
             btnCancel.DialogResult = DialogResult.Cancel;
-            btnCancel.Location = new Point(345, 115);
+            btnCancel.Location = new Point(345, 145);
             btnCancel.Size = new Size(80, 32);
             this.Controls.Add(btnCancel);
 

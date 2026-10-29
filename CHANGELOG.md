@@ -7,6 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - 2026-10-29
+
+### Added
+- **Version Numbering in Window Title & Releases:**
+  - Added explicit version indicator `(v1.0.3)` to the application window title bar so administrators can instantly verify their deployed executable version against unversioned legacy copies.
+- **Enhanced Tabular Account & Computer Forensics:**
+  - Structured Active Directory attributes and computer records into aligned two-column tables (`FIELD | VALUE`) with monospace typography and visual header divider bars.
+  - Formatted the Event Audit Log Timeline into dedicated columns with color-highlighted status flags.
+  - Standardized Notable Client IPs and Caller Computers to uniformly display `IP -> Hostname (or (cannot resolve)) | N event(s) | Latest: YYYY-MM-DD HH:MM:SS`.
+  - Enabled QUSER remote session queries and AD computer inspection for Notable Client IPs.
+
+## [1.1.0] - 2026-10-29
+
+### Added
+- **Expanded Forensic Event Suite:**
+  - Integrated Security Event IDs 4624 (Logon Success), 4625 (Logon Failure), 4771 (Kerberos Pre-Auth Failure), 4740 (Account Lockout), 4776 (NTLM Credential Validation), 4767 (Account Unlocked), and 4724 (Administrator Password Reset).
+  - Bounded targeted XPath event readers (recent 7 days, max 50 events per DC) ensuring zero MDR/EDR behavioral alerts.
+  - Real-time post-unlock logon verification (Event 4624) resolving Active Directory `lastLogonTimestamp` replication lag, with inline guidance explaining local workstation screen unlock (Logon Type 7) Kerberos TGT caching.
+- **Dual-Box Caller Computer & Notable IP Separation:**
+  - Dedicated **Caller Computers (Workstations / Servers)** list box strictly for managed Windows hostnames.
+  - Dedicated **Notable Client IPs (Event Log Source IPs)** list box for client IP addresses originating from authentication events.
+- **Asynchronous Reverse DNS (PTR) Resolution:**
+  - Non-blocking reverse DNS lookups on background thread displaying inline hostname mappings (e.g., `10.1.20.45 -> WKSTN-042.corp.contoso.com`).
+- **Targeted Active Directory Computer Object Inspection:**
+  - Real-time single-object AD lookup (`(&(objectCategory=computer)(sAMAccountName=SHORTNAME$))`) determining OS, version, OU path, and device category (Windows Server vs. Windows Workstation vs. Non-domain Linux/Chromebook/mobile endpoint).
+- **Intelligent Machine Deduplication & Event Aggregation:**
+  - Automatically deduplicates and merges IPs matching physical caller computers (e.g. `WKSTN-042` appearing once in Caller Computers with combined event counts and Associated Client IPs listed).
+  - Prevents redundant IP listings when multiple network adapters (Ethernet and Wi-Fi) or DHCP leases authenticate the same physical machine.
+- **Structured Tabular Layout with Aligned Columns & Visual Dividers:**
+  - Standardized on Consolas monospace font with horizontal/vertical scrolling to eliminate awkward word-wrap breaks across dates, timestamps, and numbers.
+  - Aligned two-column table (`FIELD | CURRENT AD VALUE`) with clean column borders and visual header divider bars.
+  - Formatted Event Audit Log Timeline into dedicated columns (`DATE & TIME | EVENT ID & TYPE | CALLER / IP / WORKSTATION | STATUS / RESULT / CODE | DOMAIN CONTROLLER`).
+  - Color-highlighted status flags: bold Red for active lockouts and bad password failures, bold Green for unlocks and successful logons, Sky Blue for section banners, and Amber for pre-auth/NTLM notices.
+- **Password Reset Enhancements:**
+  - Added checkbox to require the user to change their password at next logon (`user.ExpirePasswordNow()`).
+
+### Fixed
+- Fixed C# compiler variable scope error (`CS0103: infrastructureNote`) in `RenderComputerAdDetails`.
+- Fixed Column 2 TableLayoutPanel layout overlap where action buttons collided with the Target Details rich text box at cell (0, 2).
+- Fixed ListBox string caching so reverse DNS resolved hostnames immediately render upon background thread completion.
+- Removed unused private GroupBox fields (`_grpAccounts`, `_grpComputers`, `_grpSessions`) eliminating compiler warnings.
+
+---
+
 ## [1.0.0] - 2026-10-26
 
 ### Added
