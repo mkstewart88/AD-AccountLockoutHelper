@@ -50,3 +50,7 @@ Run the compiled `AccountLockoutHelper.exe` on a domain-joined PC to verify the 
 2. Ensure your code passes all lint and build checks.
 3. Test your changes against a domain-joined test environment or lab domain controller.
 4. Open a Pull Request with a clear description of the problem, the root cause, and the verification steps performed.
+
+---
+
+*Note: The project is maintained strictly on an as-is basis. Submission of issues or pull requests does not guarantee review, merging, or support.*

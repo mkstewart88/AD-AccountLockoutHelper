@@ -10,6 +10,14 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
 
 ---
 
+## Maintenance, Liability & Commercial Policy
+
+- **Strictly "As-Is" Basis:** This software is provided without warranty of any kind. The author is under zero obligation to provide technical support, maintenance, bug fixes, or security patches. Issues and pull requests are handled entirely at the author's discretion.
+- **Complete Zero Liability:** The operator and organization executing this tool assume 100% of all operational, legal, and financial risk. The author and contributors accept absolute zero liability for any outcomes, errors, account locks, reboots, or system disruptions.
+- **Commercial Usage & Attribution:** You are free to use and distribute this software. However, if any part of this code is incorporated into a **paid or commercial software product**, a public attribution/shout-out must be posted on the official GitHub repository (via Discussions or an Issue).
+
+---
+
 ## Key Capabilities
 
 - **Domain Lockout & Password Policy Discovery:**

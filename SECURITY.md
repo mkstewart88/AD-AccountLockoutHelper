@@ -1,10 +1,10 @@
 # Security Policy
 
-## Supported Versions
+## Maintenance & Support Policy
 
-| Version | Supported          | Notes |
-| ------- | ------------------ | ----- |
-| 1.0.x   | :white_check_mark: | Current active release branch |
+This software is provided on a strict **"as-is"** and **"take-it-or-leave-it"** basis. There is **no SLA, no guaranteed support, and no obligation to provide updates, bug fixes, or security patches**. 
+
+Issues and pull requests submitted on GitHub may be reviewed, addressed, or completely ignored at the author's sole and absolute discretion. Use and deployment are entirely at the operator's own risk.
 
 ---
 
