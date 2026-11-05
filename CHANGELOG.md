@@ -7,17 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.3] - 2026-10-29
-
-### Added
-- **Version Numbering in Window Title & Releases:**
-  - Added explicit version indicator `(v1.0.3)` to the application window title bar so administrators can instantly verify their deployed executable version against unversioned legacy copies.
-- **Enhanced Tabular Account & Computer Forensics:**
-  - Structured Active Directory attributes and computer records into aligned two-column tables (`FIELD | VALUE`) with monospace typography and visual header divider bars.
-  - Formatted the Event Audit Log Timeline into dedicated columns with color-highlighted status flags.
-  - Standardized Notable Client IPs and Caller Computers to uniformly display `IP -> Hostname (or (cannot resolve)) | N event(s) | Latest: YYYY-MM-DD HH:MM:SS`.
-  - Enabled QUSER remote session queries and AD computer inspection for Notable Client IPs.
-
 ## [1.1.0] - 2026-10-29
 
 ### Added
@@ -48,6 +37,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed Column 2 TableLayoutPanel layout overlap where action buttons collided with the Target Details rich text box at cell (0, 2).
 - Fixed ListBox string caching so reverse DNS resolved hostnames immediately render upon background thread completion.
 - Removed unused private GroupBox fields (`_grpAccounts`, `_grpComputers`, `_grpSessions`) eliminating compiler warnings.
+
+---
+
+## [1.0.5] - 2026-10-29
+
+### Added
+- **Version Numbering in Releases:**
+  - Standardized semantic versioning tracking across releases and documentation.
+- **Enhanced Tabular Account & Computer Forensics:**
+  - Structured Active Directory attributes and computer records into aligned two-column tables (`FIELD | VALUE`) with monospace typography and visual header divider bars.
+  - Formatted the Event Audit Log Timeline into dedicated columns with color-highlighted status flags.
+  - Standardized Notable Client IPs and Caller Computers to uniformly display `IP -> Hostname (or (cannot resolve)) | N event(s) | Latest: YYYY-MM-DD HH:MM:SS`.
+  - Enabled QUSER remote session queries and AD computer inspection for Notable Client IPs.
 
 ---
 
