@@ -3,8 +3,10 @@ DOMAIN LOCKOUT HELPER - NATIVE WINDOWS UTILITY QUICK START
 ======================================================================
 
 REQUIRED ENVIRONMENT:
-- Must be executed on a domain-joined Windows machine.
-- Requires Domain Administrator (or equivalent) credentials to query security logs, unlock accounts, and reset passwords.
+- Runs on any Windows 10/11 or Windows Server 2016-2025 machine.
+- Domain-Joined PCs: Automatically detects and queries your local joined domain on launch.
+- Non-Domain Joined PCs / Support Laptops / Jump Boxes: Click "Switch Domain / Auth" in the top-right header to connect to any target domain with custom credentials.
+- Requires Domain Administrator (or Account Operator / Event Log Reader) credentials to query security logs, unlock accounts, and reset passwords.
 - No RSAT installation required; uses native .NET interfaces.
 
 ----------------------------------------------------------------------
@@ -22,8 +24,9 @@ STEP 2: RUN OR DISTRIBUTE "AccountLockoutHelper.exe"
    - Instantly opens the native Windows desktop application.
    - Connects to Active Directory, queries domain lockout policies, detects
      domain controllers, and scans Security logs for Event 4740 (lockouts) and Event 4767 (unlocks).
+   - Non-Domain Joined Machines: If the machine is not joined to a domain, a prompt will appear offering to enter domain credentials, or click "Switch Domain / Auth" at the top-right. Your domain and username will be saved for next time (passwords are never saved).
    - Shows locked accounts, root causes, caller PCs/IPs, who performed unlocks, and QUSER sessions.
-   - STANDALONE DEPLOYMENT NOTE: Once compiled, ONLY "AccountLockoutHelper.exe" is needed. You can copy just the .exe file to a network share, USB flash drive, or any domain-joined PC. All source code (Program-Code.cs), build scripts (Build-Executable.cmd), and documentation can be left behind or deleted.
+   - STANDALONE DEPLOYMENT NOTE: Once compiled, ONLY "AccountLockoutHelper.exe" is needed. You can copy just the .exe file to a network share, USB flash drive, or any Windows PC. All source code (Program-Code.cs), build scripts (Build-Executable.cmd), and documentation can be left behind or deleted.
 
 OPTIONAL: MANUAL C# COMPILATION
    - Open Command Prompt as Administrator and run:

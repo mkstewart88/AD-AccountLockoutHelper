@@ -52,9 +52,11 @@ using System.Net;
 using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows.Forms;
+using Microsoft.Win32;
 
 [assembly: AssemblyTitle("Account Lockout Helper")]
 [assembly: AssemblyDescription("Active Directory Account Lockout Diagnostic Tool")]
@@ -64,8 +66,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCopyright("Copyright (C) 2026")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]
 [assembly: ComVisible(false)]
 
 namespace DomainLockoutHelper
@@ -197,6 +199,15 @@ namespace DomainLockoutHelper
         private string _selectedComputer = null;
         private QUserSessionItem _selectedSession = null;
 
+        // Custom Domain & Credential Authentication (supports non-domain joined PCs)
+        private string _customDomain = null;
+        private string _customUsername = null;
+        private string _customPassword = null;
+        private bool _useCustomCredentials = false;
+        private string _savedDomain = "";
+        private string _savedUsername = "";
+        private Button _btnSwitchDomain;
+
         // UI Controls - Column 1: Accounts
         private ListBox _lstCurrentAccounts;
         private ListBox _lstHistoricalAccounts;
@@ -224,6 +235,8 @@ namespace DomainLockoutHelper
         private ToolStripStatusLabel _statusLabel;
         private ToolStripStatusLabel _countsLabel;
         private ToolStripStatusLabel _domainInfoLabel;
+        private ToolStripStatusLabel _authModeLabel;
+        private ToolStripStatusLabel _versionLabel;
         private ToolStripProgressBar _progressBar;
 
         // Theme Support
@@ -237,13 +250,14 @@ namespace DomainLockoutHelper
 
         public MainForm()
         {
+            LoadSavedSettings();
             InitializeComponent();
         }
 
         private void InitializeComponent()
         {
             _toolTip = new ToolTip();
-            this.Text = "Account Lockout Helper & Root Cause Investigator (v1.0.3)";
+            this.Text = "Account Lockout Helper & Root Cause Investigator (v1.2.0)";
             this.Size = new Size(1680, 960);
             this.MinimumSize = new Size(1280, 760);
             this.WindowState = FormWindowState.Maximized;
@@ -288,27 +302,25 @@ namespace DomainLockoutHelper
             lblSub.AutoSize = true;
             lblSub.Location = new Point(14, 38);
 
-            Button btnQuickRefresh = new Button();
-            btnQuickRefresh.Text = "Refresh Forensics (F5)";
-            btnQuickRefresh.Size = new Size(180, 34);
-            btnQuickRefresh.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnQuickRefresh.Location = new Point(headerPanel.Width - 195, 16);
-            btnQuickRefresh.BackColor = Color.FromArgb(37, 99, 235);
-            btnQuickRefresh.ForeColor = Color.White;
-            btnQuickRefresh.FlatStyle = FlatStyle.Flat;
-            btnQuickRefresh.FlatAppearance.BorderSize = 0;
-            btnQuickRefresh.Font = new Font("Segoe UI Semibold", 9F);
-            btnQuickRefresh.Cursor = Cursors.Hand;
-            btnQuickRefresh.Click += (s, e) => StartRefreshAsync();
-            _headerPanel = headerPanel;
-            _lblTitle = lblTitle;
-            _lblSub = lblSub;
+            _btnSwitchDomain = new Button();
+            _btnSwitchDomain.Text = "Switch Domain / Auth";
+            _btnSwitchDomain.Size = new Size(165, 34);
+            _btnSwitchDomain.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _btnSwitchDomain.Location = new Point(headerPanel.Width - 520, 16);
+            _btnSwitchDomain.BackColor = Color.FromArgb(241, 245, 249);
+            _btnSwitchDomain.ForeColor = Color.FromArgb(15, 23, 42);
+            _btnSwitchDomain.FlatStyle = FlatStyle.Flat;
+            _btnSwitchDomain.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            _btnSwitchDomain.Font = new Font("Segoe UI Semibold", 9F);
+            _btnSwitchDomain.Cursor = Cursors.Hand;
+            _btnSwitchDomain.Click += (s, e) => SwitchDomainClick(s, e);
+            _toolTip.SetToolTip(_btnSwitchDomain, "Connect to a target domain or enter credentials (supports non-domain joined computers).");
 
             _btnThemeToggle = new Button();
             _btnThemeToggle.Text = "Dark Mode";
-            _btnThemeToggle.Size = new Size(130, 34);
+            _btnThemeToggle.Size = new Size(125, 34);
             _btnThemeToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _btnThemeToggle.Location = new Point(headerPanel.Width - 340, 16);
+            _btnThemeToggle.Location = new Point(headerPanel.Width - 345, 16);
             _btnThemeToggle.BackColor = Color.FromArgb(241, 245, 249);
             _btnThemeToggle.ForeColor = Color.FromArgb(15, 23, 42);
             _btnThemeToggle.FlatStyle = FlatStyle.Flat;
@@ -318,8 +330,26 @@ namespace DomainLockoutHelper
             _btnThemeToggle.Click += (s, e) => ToggleDarkMode();
             _toolTip.SetToolTip(_btnThemeToggle, "Toggle between Dark Mode and Light Mode for server rooms and low-light environments.");
 
+            Button btnQuickRefresh = new Button();
+            btnQuickRefresh.Text = "Refresh Forensics (F5)";
+            btnQuickRefresh.Size = new Size(195, 34);
+            btnQuickRefresh.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            btnQuickRefresh.Location = new Point(headerPanel.Width - 210, 16);
+            btnQuickRefresh.BackColor = Color.FromArgb(37, 99, 235);
+            btnQuickRefresh.ForeColor = Color.White;
+            btnQuickRefresh.FlatStyle = FlatStyle.Flat;
+            btnQuickRefresh.FlatAppearance.BorderSize = 0;
+            btnQuickRefresh.Font = new Font("Segoe UI Semibold", 9F);
+            btnQuickRefresh.Cursor = Cursors.Hand;
+            btnQuickRefresh.Click += (s, e) => StartRefreshAsync();
+
+            _headerPanel = headerPanel;
+            _lblTitle = lblTitle;
+            _lblSub = lblSub;
+
             headerPanel.Controls.Add(lblTitle);
             headerPanel.Controls.Add(lblSub);
+            headerPanel.Controls.Add(_btnSwitchDomain);
             headerPanel.Controls.Add(_btnThemeToggle);
             headerPanel.Controls.Add(btnQuickRefresh);
             mainLayout.Controls.Add(headerPanel, 0, 0);
@@ -700,10 +730,21 @@ namespace DomainLockoutHelper
             _domainInfoLabel.Text = "Domain: Detecting...";
             _domainInfoLabel.ForeColor = Color.FromArgb(71, 85, 105);
 
+            _authModeLabel = new ToolStripStatusLabel();
+            _authModeLabel.Text = "[Integrated Auth]";
+            _authModeLabel.ForeColor = Color.FromArgb(37, 99, 235);
+
+            _versionLabel = new ToolStripStatusLabel();
+            _versionLabel.Text = "v1.2.0";
+            _versionLabel.Font = new Font("Segoe UI Semibold", 9F);
+            _versionLabel.ForeColor = Color.FromArgb(100, 116, 139);
+
             statusStrip.Items.Add(_statusLabel);
             statusStrip.Items.Add(_progressBar);
             statusStrip.Items.Add(_countsLabel);
             statusStrip.Items.Add(_domainInfoLabel);
+            statusStrip.Items.Add(_authModeLabel);
+            statusStrip.Items.Add(_versionLabel);
             mainLayout.Controls.Add(statusStrip, 0, 2);
 
             this.Shown += (s, e) => StartRefreshAsync();
@@ -725,6 +766,12 @@ namespace DomainLockoutHelper
             {
                 _btnThemeToggle.Text = dark ? "Light Mode" : "Dark Mode";
             }
+            if (_btnSwitchDomain != null)
+            {
+                _btnSwitchDomain.BackColor = dark ? Color.FromArgb(51, 65, 85) : Color.FromArgb(241, 245, 249);
+                _btnSwitchDomain.ForeColor = dark ? Color.FromArgb(241, 245, 249) : Color.FromArgb(15, 23, 42);
+                _btnSwitchDomain.FlatAppearance.BorderColor = dark ? Color.FromArgb(71, 85, 105) : Color.FromArgb(203, 213, 225);
+            }
 
             Color bg = dark ? Color.FromArgb(15, 23, 42) : Color.FromArgb(243, 246, 250);
             Color surface = dark ? Color.FromArgb(30, 41, 59) : Color.White;
@@ -744,6 +791,13 @@ namespace DomainLockoutHelper
             if (_statusLabel != null) _statusLabel.ForeColor = textSecondary;
             if (_countsLabel != null) _countsLabel.ForeColor = textPrimary;
             if (_domainInfoLabel != null) _domainInfoLabel.ForeColor = textSecondary;
+            if (_authModeLabel != null)
+            {
+                _authModeLabel.ForeColor = _useCustomCredentials
+                    ? (dark ? Color.FromArgb(74, 222, 128) : Color.FromArgb(22, 163, 74))
+                    : (dark ? Color.FromArgb(96, 165, 250) : Color.FromArgb(37, 99, 235));
+            }
+            if (_versionLabel != null) _versionLabel.ForeColor = textSecondary;
 
             if (_rtbAccountDetails != null && !string.IsNullOrEmpty(_rtbAccountDetails.Text))
             {
@@ -841,6 +895,252 @@ namespace DomainLockoutHelper
         }
 
         // -------------------------------------------------------------
+        // CREDENTIAL & SETTINGS PERSISTENCE (SAVED DOMAIN & USERNAME ONLY)
+        // Passwords are kept strictly in volatile memory and NEVER saved.
+        // -------------------------------------------------------------
+        private void LoadSavedSettings()
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(@"Software\AccountLockoutHelper", false))
+                {
+                    if (key != null)
+                    {
+                        object domObj = key.GetValue("LastDomain");
+                        if (domObj != null) _savedDomain = domObj.ToString();
+
+                        object userObj = key.GetValue("LastUsername");
+                        if (userObj != null) _savedUsername = userObj.ToString();
+                    }
+                }
+            }
+            catch { }
+
+            if (string.IsNullOrEmpty(_savedDomain) || string.IsNullOrEmpty(_savedUsername))
+            {
+                try
+                {
+                    string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                    string iniPath = Path.Combine(appData, @"AccountLockoutHelper\settings.ini");
+                    if (File.Exists(iniPath))
+                    {
+                        string[] lines = File.ReadAllLines(iniPath);
+                        for (int i = 0; i < lines.Length; i++)
+                        {
+                            string line = lines[i];
+                            if (line.StartsWith("LastDomain=", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(_savedDomain))
+                            {
+                                _savedDomain = line.Substring("LastDomain=".Length).Trim();
+                            }
+                            else if (line.StartsWith("LastUsername=", StringComparison.OrdinalIgnoreCase) && string.IsNullOrEmpty(_savedUsername))
+                            {
+                                _savedUsername = line.Substring("LastUsername=".Length).Trim();
+                            }
+                        }
+                    }
+                }
+                catch { }
+            }
+        }
+
+        private void SaveSettings(string domain, string username)
+        {
+            _savedDomain = domain ?? "";
+            _savedUsername = username ?? "";
+
+            // 1. Registry persistence in HKCU
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\AccountLockoutHelper"))
+                {
+                    if (key != null)
+                    {
+                        key.SetValue("LastDomain", _savedDomain, RegistryValueKind.String);
+                        key.SetValue("LastUsername", _savedUsername, RegistryValueKind.String);
+                    }
+                }
+            }
+            catch { }
+
+            // 2. Local AppData file fallback
+            try
+            {
+                string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+                string folder = Path.Combine(appData, "AccountLockoutHelper");
+                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+                string iniPath = Path.Combine(folder, "settings.ini");
+                File.WriteAllText(iniPath, string.Format("LastDomain={0}\r\nLastUsername={1}\r\n", _savedDomain, _savedUsername));
+            }
+            catch { }
+        }
+
+        private DirectoryEntry CreateLdapRootEntry(string domainOverride = null)
+        {
+            string targetDom = !string.IsNullOrEmpty(domainOverride) && !domainOverride.Equals("Unknown", StringComparison.OrdinalIgnoreCase)
+                ? domainOverride
+                : (!string.IsNullOrEmpty(_customDomain) ? _customDomain : _domainName);
+
+            if (_useCustomCredentials && !string.IsNullOrEmpty(_customUsername))
+            {
+                string path = !string.IsNullOrEmpty(targetDom) ? "LDAP://" + targetDom : "LDAP://RootDSE";
+                return new DirectoryEntry(path, _customUsername, _customPassword, AuthenticationTypes.Secure);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(targetDom))
+                {
+                    return new DirectoryEntry("LDAP://" + targetDom);
+                }
+                else
+                {
+                    return new DirectoryEntry();
+                }
+            }
+        }
+
+        private DirectorySearcher CreateDirectorySearcher(string domainOverride = null)
+        {
+            DirectoryEntry root = CreateLdapRootEntry(domainOverride);
+            return new DirectorySearcher(root);
+        }
+
+        private DirectoryEntry GetDirectoryEntryFromPath(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return new DirectoryEntry();
+            if (_useCustomCredentials && !string.IsNullOrEmpty(_customUsername))
+            {
+                return new DirectoryEntry(path, _customUsername, _customPassword, AuthenticationTypes.Secure);
+            }
+            else
+            {
+                return new DirectoryEntry(path);
+            }
+        }
+
+        private EventLogSession CreateEventLogSession(string targetServer)
+        {
+            if (_useCustomCredentials && !string.IsNullOrEmpty(_customUsername) && _customPassword != null)
+            {
+                string dom = _customDomain;
+                string user = _customUsername;
+                if (user.Contains("\\"))
+                {
+                    string[] parts = user.Split(new char[] { '\\' }, 2);
+                    dom = parts[0];
+                    user = parts[1];
+                }
+                else if (user.Contains("@"))
+                {
+                    string[] parts = user.Split(new char[] { '@' }, 2);
+                    user = parts[0];
+                    dom = parts[1];
+                }
+
+                SecureString secPass = new SecureString();
+                for (int i = 0; i < _customPassword.Length; i++)
+                {
+                    secPass.AppendChar(_customPassword[i]);
+                }
+                secPass.MakeReadOnly();
+
+                try
+                {
+                    return new EventLogSession(targetServer, dom, user, secPass, SessionAuthentication.Default);
+                }
+                catch
+                {
+                    return new EventLogSession(targetServer);
+                }
+            }
+            else
+            {
+                return new EventLogSession(targetServer);
+            }
+        }
+
+        private PrincipalContext CreatePrincipalContext(string domainOverride = null)
+        {
+            string targetDom = !string.IsNullOrEmpty(domainOverride) && !domainOverride.Equals("Unknown", StringComparison.OrdinalIgnoreCase)
+                ? domainOverride
+                : (!string.IsNullOrEmpty(_customDomain) ? _customDomain : _domainName);
+
+            if (_useCustomCredentials && !string.IsNullOrEmpty(_customUsername))
+            {
+                return new PrincipalContext(ContextType.Domain, targetDom, null, ContextOptions.Negotiate, _customUsername, _customPassword);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(targetDom))
+                {
+                    return new PrincipalContext(ContextType.Domain, targetDom);
+                }
+                else
+                {
+                    return new PrincipalContext(ContextType.Domain);
+                }
+            }
+        }
+
+        private void SwitchDomainClick(object sender, EventArgs e)
+        {
+            string initialDom = !string.IsNullOrEmpty(_customDomain)
+                ? _customDomain
+                : (!string.IsNullOrEmpty(_savedDomain)
+                    ? _savedDomain
+                    : (!string.IsNullOrEmpty(_domainName) && !_domainName.Equals("Unknown", StringComparison.OrdinalIgnoreCase) ? _domainName : ""));
+
+            string initialUser = !string.IsNullOrEmpty(_customUsername) ? _customUsername : _savedUsername;
+
+            using (DomainCredentialsDialog dlg = new DomainCredentialsDialog(initialDom, initialUser, _isDarkMode))
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    if (dlg.UseIntegratedAuth)
+                    {
+                        _useCustomCredentials = false;
+                        _customDomain = null;
+                        _customUsername = null;
+                        _customPassword = null;
+                        if (_authModeLabel != null)
+                        {
+                            _authModeLabel.Text = "[Integrated Auth]";
+                            _authModeLabel.ForeColor = _isDarkMode ? Color.FromArgb(96, 165, 250) : Color.FromArgb(37, 99, 235);
+                        }
+                    }
+                    else
+                    {
+                        string domInput = (dlg.DomainName ?? "").Trim();
+                        string userInput = (dlg.Username ?? "").Trim();
+
+                        if (string.IsNullOrEmpty(domInput))
+                        {
+                            MessageBox.Show("Please enter a target domain name or Domain Controller hostname.", "Domain Required", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            return;
+                        }
+
+                        _useCustomCredentials = true;
+                        _customDomain = domInput;
+                        _customUsername = userInput;
+                        _customPassword = dlg.Password;
+
+                        // Save the last used domain and username (NEVER the password!)
+                        SaveSettings(_customDomain, _customUsername);
+
+                        if (_authModeLabel != null)
+                        {
+                            string displayUser = !string.IsNullOrEmpty(_customUsername) ? _customUsername : "Default";
+                            _authModeLabel.Text = string.Format("[Auth: {0}\\{1}]", _customDomain, displayUser);
+                            _authModeLabel.ForeColor = _isDarkMode ? Color.FromArgb(74, 222, 128) : Color.FromArgb(22, 163, 74);
+                        }
+                    }
+
+                    // Once connected, start the search over with new credentials
+                    StartRefreshAsync();
+                }
+            }
+        }
+
+        // -------------------------------------------------------------
         // ACTIVE DIRECTORY DISCOVERY & EVENT LOG SCANNING
         // (CRITICAL: EXCLUDES DISABLED USER ACCOUNTS)
         // -------------------------------------------------------------
@@ -861,30 +1161,73 @@ namespace DomainLockoutHelper
 
                 try
                 {
-                    // 1. Discover Domain Controllers
-                    try
+                    // 1. Discover Domain Controllers (supports custom domain or local computer joined domain)
+                    if (_useCustomCredentials && !string.IsNullOrEmpty(_customDomain))
                     {
-                        Domain currentDomain = Domain.GetCurrentDomain();
-                        domainName = currentDomain.Name;
-                        foreach (DomainController dc in currentDomain.DomainControllers)
+                        domainName = _customDomain;
+                        try
                         {
-                            dcs.Add(dc.Name);
+                            DirectoryContext dirCtx;
+                            if (!string.IsNullOrEmpty(_customUsername))
+                            {
+                                dirCtx = new DirectoryContext(DirectoryContextType.Domain, _customDomain, _customUsername, _customPassword);
+                            }
+                            else
+                            {
+                                dirCtx = new DirectoryContext(DirectoryContextType.Domain, _customDomain);
+                            }
+                            Domain customDomain = Domain.GetDomain(dirCtx);
+                            foreach (DomainController dc in customDomain.DomainControllers)
+                            {
+                                dcs.Add(dc.Name);
+                            }
+                        }
+                        catch
+                        {
+                            try
+                            {
+                                IPHostEntry hostEntry = Dns.GetHostEntry(_customDomain);
+                                if (hostEntry != null && !string.IsNullOrEmpty(hostEntry.HostName))
+                                {
+                                    dcs.Add(hostEntry.HostName);
+                                }
+                                else
+                                {
+                                    dcs.Add(_customDomain);
+                                }
+                            }
+                            catch
+                            {
+                                dcs.Add(_customDomain);
+                            }
                         }
                     }
-                    catch
+                    else
                     {
-                        string logonServer = Environment.GetEnvironmentVariable("LOGONSERVER");
-                        if (!string.IsNullOrEmpty(logonServer))
+                        try
                         {
-                            dcs.Add(logonServer.TrimStart('\\'));
+                            Domain currentDomain = Domain.GetCurrentDomain();
+                            domainName = currentDomain.Name;
+                            foreach (DomainController dc in currentDomain.DomainControllers)
+                            {
+                                dcs.Add(dc.Name);
+                            }
                         }
-                        string userDomain = Environment.GetEnvironmentVariable("USERDNSDOMAIN");
-                        if (!string.IsNullOrEmpty(userDomain)) domainName = userDomain;
+                        catch
+                        {
+                            string logonServer = Environment.GetEnvironmentVariable("LOGONSERVER");
+                            if (!string.IsNullOrEmpty(logonServer))
+                            {
+                                dcs.Add(logonServer.TrimStart('\\'));
+                            }
+                            string userDomain = Environment.GetEnvironmentVariable("USERDNSDOMAIN");
+                            if (!string.IsNullOrEmpty(userDomain)) domainName = userDomain;
+                        }
                     }
 
                     if (dcs.Count == 0)
                     {
-                        errorMsg = "No Active Directory Domain Controllers could be contacted. Verify network or VPN connection.";
+                        errorMsg = "No Active Directory Domain Controllers could be contacted. Verify network, VPN, or credentials.";
                     }
                     else
                     {
@@ -893,7 +1236,7 @@ namespace DomainLockoutHelper
                         // CRITICAL: Check IsAccountLocked so accounts whose lockout duration expired are NOT marked as currently locked!
                         try
                         {
-                            using (DirectorySearcher searcher = new DirectorySearcher())
+                            using (DirectorySearcher searcher = CreateDirectorySearcher(domainName))
                             {
                                 searcher.Filter = "(&(objectCategory=person)(objectClass=user)(!(userAccountControl:1.2.840.113556.1.4.803:=2))(lockoutTime>=1))";
                                 searcher.PageSize = 500;
@@ -928,14 +1271,14 @@ namespace DomainLockoutHelper
                                         bool isActivelyLocked = false;
                                         try
                                         {
-                                            DirectoryEntry de = res.GetDirectoryEntry();
+                                            DirectoryEntry de = GetDirectoryEntryFromPath(res.Path);
                                             isActivelyLocked = (bool)de.InvokeGet("IsAccountLocked");
                                         }
                                         catch
                                         {
                                             try
                                             {
-                                                using (PrincipalContext pctx = new PrincipalContext(ContextType.Domain, domainName))
+                                                using (PrincipalContext pctx = CreatePrincipalContext(domainName))
                                                 {
                                                     using (UserPrincipal up = UserPrincipal.FindByIdentity(pctx, sam))
                                                     {
@@ -1031,7 +1374,7 @@ namespace DomainLockoutHelper
                             {
                                 string query = "*[System[((EventID=4740 or EventID=4767)) and TimeCreated[timediff(@SystemTime) <= 7776000000]]]"; // 90 days
                                 EventLogQuery elq = new EventLogQuery("Security", PathType.LogName, query);
-                                elq.Session = new EventLogSession(dc);
+                                elq.Session = CreateEventLogSession(dc);
 
                                 using (EventLogReader reader = new EventLogReader(elq))
                                 {
@@ -1190,7 +1533,7 @@ namespace DomainLockoutHelper
                             {
                                 try
                                 {
-                                    using (DirectorySearcher searcher = new DirectorySearcher())
+                                    using (DirectorySearcher searcher = CreateDirectorySearcher(domainName))
                                     {
                                         searcher.Filter = string.Format("(&(objectCategory=person)(objectClass=user)(samaccountname={0}))", sam);
                                         searcher.PropertiesToLoad.AddRange(new string[] {
@@ -1328,13 +1671,18 @@ namespace DomainLockoutHelper
                     if (errorMsg != null && dcs.Count == 0)
                     {
                         _statusLabel.Text = "Notice: " + errorMsg + " (No domain controllers could be contacted)";
-                        MessageBox.Show(
-                            "Could not contact a Domain Controller from this computer.\r\n\r\n" +
-                            "Make sure this machine is domain-joined and connected to your corporate network or VPN.\r\n\r\n" +
-                            "Verify that your account has domain administrative or security event log read permissions.",
+                        DialogResult promptChoice = MessageBox.Show(
+                            "Could not contact an Active Directory Domain Controller for the local computer.\r\n\r\n" +
+                            "If this machine is not domain-joined or is running on a remote/home network, you can switch domains and specify custom credentials.\r\n\r\n" +
+                            "Would you like to specify a target domain and credentials now?",
                             "Domain Connection Notice",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Question);
+
+                        if (promptChoice == DialogResult.Yes)
+                        {
+                            SwitchDomainClick(null, null);
+                        }
                         return;
                     }
 
@@ -1676,7 +2024,7 @@ namespace DomainLockoutHelper
                         userTargetFilter);
 
                     EventLogQuery query = new EventLogQuery("Security", PathType.LogName, xpath);
-                    query.Session = new EventLogSession(dc);
+                    query.Session = CreateEventLogSession(dc);
 
                     using (EventLogReader reader = new EventLogReader(query))
                     {
@@ -2385,8 +2733,10 @@ namespace DomainLockoutHelper
                     {
                         try
                         {
-                            string adDomain = !string.IsNullOrEmpty(_domainName) && !_domainName.Equals("Unknown", StringComparison.OrdinalIgnoreCase) ? _domainName : Environment.GetEnvironmentVariable("USERDNSDOMAIN");
-                            using (DirectoryEntry root = new DirectoryEntry("LDAP://" + (adDomain ?? "")))
+                            string adDomain = !string.IsNullOrEmpty(_domainName) && !_domainName.Equals("Unknown", StringComparison.OrdinalIgnoreCase)
+                                ? _domainName
+                                : (!string.IsNullOrEmpty(_customDomain) ? _customDomain : Environment.GetEnvironmentVariable("USERDNSDOMAIN"));
+                            using (DirectoryEntry root = CreateLdapRootEntry(adDomain))
                             using (DirectorySearcher searcher = new DirectorySearcher(root))
                             {
                                 searcher.Filter = string.Format("(&(objectCategory=computer)(sAMAccountName={0}$))", compLookupName);
@@ -2719,13 +3069,13 @@ namespace DomainLockoutHelper
             try
             {
                 // Native LDAP unlock: set lockoutTime = 0
-                using (DirectorySearcher searcher = new DirectorySearcher())
+                using (DirectorySearcher searcher = CreateDirectorySearcher(_domainName))
                 {
                     searcher.Filter = string.Format("(&(objectCategory=person)(objectClass=user)(samaccountname={0}))", sam);
                     SearchResult res = searcher.FindOne();
                     if (res != null)
                     {
-                        DirectoryEntry entry = res.GetDirectoryEntry();
+                        DirectoryEntry entry = GetDirectoryEntryFromPath(res.Path);
                         entry.Properties["lockoutTime"].Value = 0;
                         entry.CommitChanges();
 
@@ -2778,7 +3128,7 @@ namespace DomainLockoutHelper
 
                     try
                     {
-                        using (PrincipalContext ctx = new PrincipalContext(ContextType.Domain))
+                        using (PrincipalContext ctx = CreatePrincipalContext(_domainName))
                         {
                             UserPrincipal user = UserPrincipal.FindByIdentity(ctx, sam);
                             if (user != null)
@@ -3056,6 +3406,168 @@ namespace DomainLockoutHelper
 
             this.AcceptButton = btnOk;
             this.CancelButton = btnCancel;
+        }
+    }
+
+    // -------------------------------------------------------------
+    // DOMAIN & CREDENTIAL AUTHENTICATION DIALOG (NON-DOMAIN JOINED PCS)
+    // -------------------------------------------------------------
+    public class DomainCredentialsDialog : Form
+    {
+        private TextBox _txtDomain;
+        private TextBox _txtUsername;
+        private TextBox _txtPassword;
+        private CheckBox _chkShowPassword;
+        private CheckBox _chkUseIntegrated;
+        private Button _btnConnect;
+        private Button _btnCancel;
+
+        public string DomainName { get { return _txtDomain.Text; } }
+        public string Username { get { return _txtUsername.Text; } }
+        public string Password { get { return _txtPassword.Text; } }
+        public bool UseIntegratedAuth { get { return _chkUseIntegrated.Checked; } }
+
+        public DomainCredentialsDialog(string initialDomain, string initialUsername, bool darkMode)
+        {
+            this.Text = "Switch Domain & Authentication Credentials";
+            this.Size = new Size(520, 365);
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.Font = new Font("Segoe UI", 9F);
+
+            Color bg = darkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(243, 246, 250);
+            Color surface = darkMode ? Color.FromArgb(30, 41, 59) : Color.White;
+            Color textPrimary = darkMode ? Color.FromArgb(241, 245, 249) : Color.FromArgb(15, 23, 42);
+            Color textSecondary = darkMode ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139);
+            Color inputBg = darkMode ? Color.FromArgb(15, 23, 42) : Color.White;
+            Color btnBg = darkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(241, 245, 249);
+            Color btnBorder = darkMode ? Color.FromArgb(71, 85, 105) : Color.FromArgb(203, 213, 225);
+
+            this.BackColor = bg;
+            this.ForeColor = textPrimary;
+
+            Panel contentPanel = new Panel();
+            contentPanel.Location = new Point(14, 14);
+            contentPanel.Size = new Size(476, 245);
+            contentPanel.BackColor = surface;
+            contentPanel.BorderStyle = BorderStyle.FixedSingle;
+
+            Label lblHeader = new Label();
+            lblHeader.Text = "Target Active Directory Domain & Authentication";
+            lblHeader.Font = new Font("Segoe UI Semibold", 10F);
+            lblHeader.ForeColor = textPrimary;
+            lblHeader.Location = new Point(14, 12);
+            lblHeader.AutoSize = true;
+            contentPanel.Controls.Add(lblHeader);
+
+            Label lblNote = new Label();
+            lblNote.Text = "Specify a target domain or Domain Controller. Passwords are held\r\nin volatile memory only and are never saved to disk or registry.";
+            lblNote.Font = new Font("Segoe UI", 8.5F);
+            lblNote.ForeColor = textSecondary;
+            lblNote.Location = new Point(15, 34);
+            lblNote.AutoSize = true;
+            contentPanel.Controls.Add(lblNote);
+
+            Label lblDom = new Label();
+            lblDom.Text = "Domain or DC (e.g. contoso.com or dc01.corp):";
+            lblDom.Location = new Point(15, 74);
+            lblDom.AutoSize = true;
+            lblDom.ForeColor = textPrimary;
+            contentPanel.Controls.Add(lblDom);
+
+            _txtDomain = new TextBox();
+            _txtDomain.Location = new Point(18, 95);
+            _txtDomain.Size = new Size(438, 23);
+            _txtDomain.Text = initialDomain ?? "";
+            _txtDomain.BackColor = inputBg;
+            _txtDomain.ForeColor = textPrimary;
+            contentPanel.Controls.Add(_txtDomain);
+
+            Label lblUser = new Label();
+            lblUser.Text = "Username (e.g. admin_user or contoso\\admin_user):";
+            lblUser.Location = new Point(15, 126);
+            lblUser.AutoSize = true;
+            lblUser.ForeColor = textPrimary;
+            contentPanel.Controls.Add(lblUser);
+
+            _txtUsername = new TextBox();
+            _txtUsername.Location = new Point(18, 147);
+            _txtUsername.Size = new Size(210, 23);
+            _txtUsername.Text = initialUsername ?? "";
+            _txtUsername.BackColor = inputBg;
+            _txtUsername.ForeColor = textPrimary;
+            contentPanel.Controls.Add(_txtUsername);
+
+            Label lblPass = new Label();
+            lblPass.Text = "Password:";
+            lblPass.Location = new Point(243, 126);
+            lblPass.AutoSize = true;
+            lblPass.ForeColor = textPrimary;
+            contentPanel.Controls.Add(lblPass);
+
+            _txtPassword = new TextBox();
+            _txtPassword.Location = new Point(246, 147);
+            _txtPassword.Size = new Size(210, 23);
+            _txtPassword.UseSystemPasswordChar = true;
+            _txtPassword.BackColor = inputBg;
+            _txtPassword.ForeColor = textPrimary;
+            contentPanel.Controls.Add(_txtPassword);
+
+            _chkShowPassword = new CheckBox();
+            _chkShowPassword.Text = "Show password";
+            _chkShowPassword.Location = new Point(246, 175);
+            _chkShowPassword.AutoSize = true;
+            _chkShowPassword.ForeColor = textSecondary;
+            _chkShowPassword.CheckedChanged += (s, e) => _txtPassword.UseSystemPasswordChar = !_chkShowPassword.Checked;
+            contentPanel.Controls.Add(_chkShowPassword);
+
+            _chkUseIntegrated = new CheckBox();
+            _chkUseIntegrated.Text = "Use local computer's joined domain & integrated credentials";
+            _chkUseIntegrated.Location = new Point(18, 208);
+            _chkUseIntegrated.AutoSize = true;
+            _chkUseIntegrated.ForeColor = textPrimary;
+            _chkUseIntegrated.CheckedChanged += (s, e) =>
+            {
+                bool custom = !_chkUseIntegrated.Checked;
+                _txtDomain.Enabled = custom;
+                _txtUsername.Enabled = custom;
+                _txtPassword.Enabled = custom;
+                _chkShowPassword.Enabled = custom;
+            };
+            contentPanel.Controls.Add(_chkUseIntegrated);
+
+            this.Controls.Add(contentPanel);
+
+            _btnConnect = new Button();
+            _btnConnect.Text = "Connect & Scan";
+            _btnConnect.DialogResult = DialogResult.OK;
+            _btnConnect.Location = new Point(248, 275);
+            _btnConnect.Size = new Size(125, 34);
+            _btnConnect.BackColor = Color.FromArgb(37, 99, 235);
+            _btnConnect.ForeColor = Color.White;
+            _btnConnect.FlatStyle = FlatStyle.Flat;
+            _btnConnect.FlatAppearance.BorderSize = 0;
+            _btnConnect.Font = new Font("Segoe UI Semibold", 9F);
+            _btnConnect.Cursor = Cursors.Hand;
+            this.Controls.Add(_btnConnect);
+
+            _btnCancel = new Button();
+            _btnCancel.Text = "Cancel";
+            _btnCancel.DialogResult = DialogResult.Cancel;
+            _btnCancel.Location = new Point(380, 275);
+            _btnCancel.Size = new Size(110, 34);
+            _btnCancel.BackColor = btnBg;
+            _btnCancel.ForeColor = textPrimary;
+            _btnCancel.FlatStyle = FlatStyle.Flat;
+            _btnCancel.FlatAppearance.BorderColor = btnBorder;
+            _btnCancel.Font = new Font("Segoe UI Semibold", 9F);
+            _btnCancel.Cursor = Cursors.Hand;
+            this.Controls.Add(_btnCancel);
+
+            this.AcceptButton = _btnConnect;
+            this.CancelButton = _btnCancel;
         }
     }
 }

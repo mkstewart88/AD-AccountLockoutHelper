@@ -26,7 +26,9 @@ STEP 2: RUN "AccountLockoutHelper.exe"
    (Zero external software or modules required; works on Windows 10/11
     and Windows Server 2016/2019/2022/2025).
 3. You can copy "AccountLockoutHelper.exe" to any network share, USB drive,
-   or domain-joined PC and run it directly.
+   or Windows PC. Supports domain-joined PCs (auto-discovery) as well as
+   non-domain joined machines via the top-right "Switch Domain / Auth" button
+   (remembers target domain and username across restarts; passwords are never saved).
 
 MANUAL C# COMPILATION
 -----------------------------------------------------------------------

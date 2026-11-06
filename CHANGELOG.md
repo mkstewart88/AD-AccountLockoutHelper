@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-11-06
+
+### Added
+- **Non-Domain Joined Computer Support:**
+  - Added native support to execute the application from non-domain joined workstations, support laptops, jump boxes, and home lab systems without requiring the host machine to be joined to the target Active Directory domain.
+  - Retains 100% backward-compatible default behavior: automatically discovers and queries the local machine's joined domain on startup using integrated Windows authentication.
+- **Top-Right Domain & Credential Switcher:**
+  - Added a dedicated **"Switch Domain / Auth"** button in the top-right header panel.
+  - Provides an interactive modal dialog (`DomainCredentialsDialog`) supporting custom target domain or Domain Controller FQDN, username, and masked password input.
+  - Includes a checkbox to quickly revert to the local computer's joined domain and integrated credentials.
+  - Automatically resets and restarts the search upon connection, refreshing locked accounts, historical records, caller computers, notable IPs, and event timelines.
+- **Secure Domain & Username Persistence:**
+  - Persists the last used domain and username across application restarts in `HKCU\Software\AccountLockoutHelper` with fallback to `%LOCALAPPDATA%\AccountLockoutHelper\settings.ini`.
+  - Strict zero-persistence credential guarantee: **passwords are held strictly in volatile memory and are never saved to registry or disk under any circumstances**.
+- **Real-Time Authentication & Version Tracking:**
+  - Added explicit application version display (`v1.2.0`) in the window title bar and status strip.
+  - Added an authentication mode indicator (`[Integrated Auth]` vs. `[Auth: DOMAIN\username]`) to the status strip with color-coded status highlights.
+- **Graceful Non-Domain Startup Prompt:**
+  - When started on a computer that is not joined to a domain or where Domain Controllers cannot be contacted, the tool prompts the operator to specify target domain credentials directly.
+- **Full Remediation Tool Compatibility:**
+  - Ensured account unlocking, administrative password resets, targeted Active Directory computer inspections, and remote security event log queries seamlessly route through the active credentials.
+
+---
+
 ## [1.1.0] - 2026-10-30
 
 ### Added

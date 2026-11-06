@@ -58,6 +58,13 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
   - Runs a fast ICMP Ping test (1000ms timeout) reporting online status and roundtrip latency.
   - Resolves host DNS IPv4/IPv6 addresses and verifies network reachability without triggering EDR computer object discovery alerts.
 
+- **Non-Domain Joined Machine Support & Domain Switcher (v1.2.0):**
+  - Enables execution from standalone support laptops, home labs, jump boxes, and non-domain joined workstations.
+  - Preserves standard default behavior: automatically interrogates the local joined domain on launch with integrated credentials.
+  - The top-right **"Switch Domain / Auth"** button allows specifying a target domain or Domain Controller FQDN with credentials at any time.
+  - Saves the last used domain and username for fast switching across app restarts (**passwords are strictly kept in volatile memory only and never saved to disk or registry**).
+  - Automatically resets and re-runs the investigation upon connecting, providing full access to all forensic and remediation tools.
+
 - **Strict Active vs. Historical Separation:**
   - **Currently Locked Out:** Evaluates Active Directory Service Interfaces (`IsAccountLocked`) and domain lockout duration policies to display *only* users who are actively locked out right now.
   - **Previously Locked Out (Forensic History):** Displays enabled accounts that experienced recent lockout events (`Event ID 4740`) but were subsequently unlocked or had their lockout duration expire. Accounts with **0 events** are excluded to eliminate clutter and focus exclusively on recent issues.
@@ -81,7 +88,7 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
 
 - **Privacy-First Architecture:**
   - Designed for secure environments: Runs entirely offline on the administrator's local machine. 
-  - Zero telemetry, zero data storage, and zero data transmission to external servers.
+  - Zero telemetry, zero data storage, and zero data transmission to external servers. Passwords are never persisted.
   - Deterministic operation based strictly on local Active Directory Service Interfaces and Windows Security Event Logs.
 
 ---
@@ -89,8 +96,8 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
 ## Zero-Dependency Architecture & Portability
 
 ### System Requirements & Permissions
-- **Environment:** Must be executed on a **domain-joined Windows machine** with network connectivity to the domain controllers.
-- **Permissions:** Must be run with **Domain Administrator** (or equivalent) credentials to successfully query Domain Controller Security Event Logs, reset user passwords, and perform account unlocks.
+- **Environment:** Windows 11, Windows 10, or Windows Server 2025/2022/2019/2016. Can run on a **domain-joined PC** (auto-detects local domain) or a **non-domain joined PC** (via the top-right "Switch Domain / Auth" button).
+- **Permissions:** Target credentials must possess Active Directory read permissions, Security Event Log read permissions, and Account Operator / Domain Admin rights for account unlocks and password resets.
 - **RSAT:** Zero external RSAT installation required; uses native .NET interfaces.
 
 ---
