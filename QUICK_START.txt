@@ -25,6 +25,7 @@ STEP 2: RUN OR DISTRIBUTE "AccountLockoutHelper.exe"
    - Connects to Active Directory, queries domain lockout policies, detects
      domain controllers, and scans Security logs for Event 4740 (lockouts) and Event 4767 (unlocks).
    - Non-Domain Joined Machines: If the machine is not joined to a domain, a prompt will appear offering to enter domain credentials, or click "Switch Domain / Auth" at the top-right. Your domain and username will be saved for next time (passwords are never saved).
+   - In-App GitHub Updates: Click "Update" in the top-right header to check GitHub for newer versions. If an update is available, it pulls the new build, hot-swaps the executable in-place, and automatically restarts.
    - Shows locked accounts, root causes, caller PCs/IPs, who performed unlocks, and QUSER sessions.
    - STANDALONE DEPLOYMENT NOTE: Once compiled, ONLY "AccountLockoutHelper.exe" is needed. You can copy just the .exe file to a network share, USB flash drive, or any Windows PC. All source code (Program-Code.cs), build scripts (Build-Executable.cmd), and documentation can be left behind or deleted.
 

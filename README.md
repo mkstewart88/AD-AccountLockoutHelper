@@ -65,6 +65,12 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
   - Saves the last used domain and username for fast switching across app restarts (**passwords are strictly kept in volatile memory only and never saved to disk or registry**).
   - Automatically resets and re-runs the investigation upon connecting, providing full access to all forensic and remediation tools.
 
+- **GitHub In-App Updater & Self-Replacement (v1.2.0):**
+  - Built-in **"Update"** button in the top-right header automatically contacts GitHub to check for newer versions.
+  - Compares the installed release against GitHub Releases API and raw repository version manifests over TLS 1.2.
+  - When an update is confirmed, it pulls the new release (either precompiled `.exe` or raw source code compiled natively via Windows `csc.exe` in ~2 seconds).
+  - Automatically hot-swaps the running executable in-place and restarts the updated application without requiring manual file replacement.
+
 - **Strict Active vs. Historical Separation:**
   - **Currently Locked Out:** Evaluates Active Directory Service Interfaces (`IsAccountLocked`) and domain lockout duration policies to display *only* users who are actively locked out right now.
   - **Previously Locked Out (Forensic History):** Displays enabled accounts that experienced recent lockout events (`Event ID 4740`) but were subsequently unlocked or had their lockout duration expire. Accounts with **0 events** are excluded to eliminate clutter and focus exclusively on recent issues.

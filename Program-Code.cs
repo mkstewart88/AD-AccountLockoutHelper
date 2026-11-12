@@ -208,6 +208,11 @@ namespace DomainLockoutHelper
         private string _savedUsername = "";
         private Button _btnSwitchDomain;
 
+        // Application Updater & GitHub Configuration
+        public const string APP_VERSION = "1.2.0";
+        private string _savedGitHubRepo = "mkstewart88/Account-Lockout-Helper";
+        private Button _btnUpdate;
+
         // UI Controls - Column 1: Accounts
         private ListBox _lstCurrentAccounts;
         private ListBox _lstHistoricalAccounts;
@@ -302,6 +307,20 @@ namespace DomainLockoutHelper
             lblSub.AutoSize = true;
             lblSub.Location = new Point(14, 38);
 
+            _btnUpdate = new Button();
+            _btnUpdate.Text = "Update";
+            _btnUpdate.Size = new Size(95, 34);
+            _btnUpdate.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _btnUpdate.Location = new Point(headerPanel.Width - 625, 16);
+            _btnUpdate.BackColor = Color.FromArgb(241, 245, 249);
+            _btnUpdate.ForeColor = Color.FromArgb(15, 23, 42);
+            _btnUpdate.FlatStyle = FlatStyle.Flat;
+            _btnUpdate.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            _btnUpdate.Font = new Font("Segoe UI Semibold", 9F);
+            _btnUpdate.Cursor = Cursors.Hand;
+            _btnUpdate.Click += (s, e) => CheckForUpdatesClick(s, e);
+            _toolTip.SetToolTip(_btnUpdate, "Check GitHub for the latest release, pull updates, and restart the executable.");
+
             _btnSwitchDomain = new Button();
             _btnSwitchDomain.Text = "Switch Domain / Auth";
             _btnSwitchDomain.Size = new Size(165, 34);
@@ -349,6 +368,7 @@ namespace DomainLockoutHelper
 
             headerPanel.Controls.Add(lblTitle);
             headerPanel.Controls.Add(lblSub);
+            headerPanel.Controls.Add(_btnUpdate);
             headerPanel.Controls.Add(_btnSwitchDomain);
             headerPanel.Controls.Add(_btnThemeToggle);
             headerPanel.Controls.Add(btnQuickRefresh);
@@ -766,6 +786,12 @@ namespace DomainLockoutHelper
             {
                 _btnThemeToggle.Text = dark ? "Light Mode" : "Dark Mode";
             }
+            if (_btnUpdate != null)
+            {
+                _btnUpdate.BackColor = dark ? Color.FromArgb(51, 65, 85) : Color.FromArgb(241, 245, 249);
+                _btnUpdate.ForeColor = dark ? Color.FromArgb(241, 245, 249) : Color.FromArgb(15, 23, 42);
+                _btnUpdate.FlatAppearance.BorderColor = dark ? Color.FromArgb(71, 85, 105) : Color.FromArgb(203, 213, 225);
+            }
             if (_btnSwitchDomain != null)
             {
                 _btnSwitchDomain.BackColor = dark ? Color.FromArgb(51, 65, 85) : Color.FromArgb(241, 245, 249);
@@ -911,6 +937,9 @@ namespace DomainLockoutHelper
 
                         object userObj = key.GetValue("LastUsername");
                         if (userObj != null) _savedUsername = userObj.ToString();
+
+                        object repoObj = key.GetValue("LastGitHubRepo");
+                        if (repoObj != null && !string.IsNullOrEmpty(repoObj.ToString())) _savedGitHubRepo = repoObj.ToString();
                     }
                 }
             }
@@ -936,6 +965,10 @@ namespace DomainLockoutHelper
                             {
                                 _savedUsername = line.Substring("LastUsername=".Length).Trim();
                             }
+                            else if (line.StartsWith("LastGitHubRepo=", StringComparison.OrdinalIgnoreCase))
+                            {
+                                _savedGitHubRepo = line.Substring("LastGitHubRepo=".Length).Trim();
+                            }
                         }
                     }
                 }
@@ -943,10 +976,11 @@ namespace DomainLockoutHelper
             }
         }
 
-        private void SaveSettings(string domain, string username)
+        private void SaveSettings(string domain, string username, string repo = null)
         {
             _savedDomain = domain ?? "";
             _savedUsername = username ?? "";
+            if (!string.IsNullOrEmpty(repo)) _savedGitHubRepo = repo;
 
             // 1. Registry persistence in HKCU
             try
@@ -957,6 +991,7 @@ namespace DomainLockoutHelper
                     {
                         key.SetValue("LastDomain", _savedDomain, RegistryValueKind.String);
                         key.SetValue("LastUsername", _savedUsername, RegistryValueKind.String);
+                        key.SetValue("LastGitHubRepo", _savedGitHubRepo ?? "mkstewart88/Account-Lockout-Helper", RegistryValueKind.String);
                     }
                 }
             }
@@ -969,7 +1004,7 @@ namespace DomainLockoutHelper
                 string folder = Path.Combine(appData, "AccountLockoutHelper");
                 if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
                 string iniPath = Path.Combine(folder, "settings.ini");
-                File.WriteAllText(iniPath, string.Format("LastDomain={0}\r\nLastUsername={1}\r\n", _savedDomain, _savedUsername));
+                File.WriteAllText(iniPath, string.Format("LastDomain={0}\r\nLastUsername={1}\r\nLastGitHubRepo={2}\r\n", _savedDomain, _savedUsername, _savedGitHubRepo));
             }
             catch { }
         }
@@ -1136,6 +1171,19 @@ namespace DomainLockoutHelper
 
                     // Once connected, start the search over with new credentials
                     StartRefreshAsync();
+                }
+            }
+        }
+
+        private void CheckForUpdatesClick(object sender, EventArgs e)
+        {
+            using (UpdateDialog dlg = new UpdateDialog(APP_VERSION, _savedGitHubRepo, _isDarkMode))
+            {
+                dlg.ShowDialog(this);
+                if (!string.IsNullOrEmpty(dlg.Repository) && !dlg.Repository.Equals(_savedGitHubRepo, StringComparison.OrdinalIgnoreCase))
+                {
+                    _savedGitHubRepo = dlg.Repository;
+                    SaveSettings(_savedDomain, _savedUsername, _savedGitHubRepo);
                 }
             }
         }
@@ -3568,6 +3616,530 @@ namespace DomainLockoutHelper
 
             this.AcceptButton = _btnConnect;
             this.CancelButton = _btnCancel;
+        }
+    }
+
+    // -------------------------------------------------------------
+    // GITHUB APPLICATION UPDATER & SELF-REPLACEMENT DIALOG
+    // -------------------------------------------------------------
+    public class UpdateDialog : Form
+    {
+        private TextBox _txtRepo;
+        private RichTextBox _rtbLog;
+        private ProgressBar _progressBar;
+        private Button _btnCheck;
+        private Button _btnUpdate;
+        private Button _btnClose;
+        private string _currentVersion;
+        private string _remoteVersion = null;
+        private string _downloadUrl = null;
+        private bool _isDownloading = false;
+        private bool _darkMode;
+
+        public string Repository { get { return _txtRepo.Text.Trim(); } }
+
+        public UpdateDialog(string currentVersion, string initialRepo, bool darkMode)
+        {
+            _currentVersion = currentVersion;
+            _darkMode = darkMode;
+
+            this.Text = "Account Lockout Helper - Check for Updates";
+            this.Size = new Size(620, 480);
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.Font = new Font("Segoe UI", 9F);
+
+            Color bg = darkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(243, 246, 250);
+            Color surface = darkMode ? Color.FromArgb(30, 41, 59) : Color.White;
+            Color textPrimary = darkMode ? Color.FromArgb(241, 245, 249) : Color.FromArgb(15, 23, 42);
+            Color textSecondary = darkMode ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139);
+            Color inputBg = darkMode ? Color.FromArgb(15, 23, 42) : Color.White;
+            Color btnBg = darkMode ? Color.FromArgb(51, 65, 85) : Color.FromArgb(241, 245, 249);
+            Color btnBorder = darkMode ? Color.FromArgb(71, 85, 105) : Color.FromArgb(203, 213, 225);
+
+            this.BackColor = bg;
+            this.ForeColor = textPrimary;
+
+            Panel topPanel = new Panel();
+            topPanel.Location = new Point(16, 14);
+            topPanel.Size = new Size(572, 115);
+            topPanel.BackColor = surface;
+            topPanel.BorderStyle = BorderStyle.FixedSingle;
+
+            Label lblTitle = new Label();
+            lblTitle.Text = string.Format("Application Version: v{0} (Installed)", currentVersion);
+            lblTitle.Font = new Font("Segoe UI Semibold", 10.5F);
+            lblTitle.ForeColor = textPrimary;
+            lblTitle.Location = new Point(14, 10);
+            lblTitle.AutoSize = true;
+            topPanel.Controls.Add(lblTitle);
+
+            Label lblSub = new Label();
+            lblSub.Text = "Checks GitHub for newer releases. When an update is confirmed, it downloads\r\nthe new executable, hot-swaps the current binary, and restarts automatically.";
+            lblSub.Font = new Font("Segoe UI", 8.5F);
+            lblSub.ForeColor = textSecondary;
+            lblSub.Location = new Point(15, 33);
+            lblSub.AutoSize = true;
+            topPanel.Controls.Add(lblSub);
+
+            Label lblRepo = new Label();
+            lblRepo.Text = "GitHub Repository (owner/repo):";
+            lblRepo.Font = new Font("Segoe UI Semibold", 8.5F);
+            lblRepo.ForeColor = textPrimary;
+            lblRepo.Location = new Point(15, 76);
+            lblRepo.AutoSize = true;
+            topPanel.Controls.Add(lblRepo);
+
+            _txtRepo = new TextBox();
+            _txtRepo.Text = string.IsNullOrEmpty(initialRepo) ? "mkstewart88/Account-Lockout-Helper" : initialRepo;
+            _txtRepo.Location = new Point(205, 73);
+            _txtRepo.Size = new Size(260, 23);
+            _txtRepo.BackColor = inputBg;
+            _txtRepo.ForeColor = textPrimary;
+            topPanel.Controls.Add(_txtRepo);
+
+            _btnCheck = new Button();
+            _btnCheck.Text = "Check";
+            _btnCheck.Location = new Point(475, 71);
+            _btnCheck.Size = new Size(82, 27);
+            _btnCheck.BackColor = btnBg;
+            _btnCheck.ForeColor = textPrimary;
+            _btnCheck.FlatStyle = FlatStyle.Flat;
+            _btnCheck.FlatAppearance.BorderColor = btnBorder;
+            _btnCheck.Font = new Font("Segoe UI Semibold", 8.5F);
+            _btnCheck.Cursor = Cursors.Hand;
+            _btnCheck.Click += (s, e) => RunUpdateCheckAsync();
+            topPanel.Controls.Add(_btnCheck);
+
+            this.Controls.Add(topPanel);
+
+            _rtbLog = new RichTextBox();
+            _rtbLog.Location = new Point(16, 138);
+            _rtbLog.Size = new Size(572, 215);
+            _rtbLog.BackColor = darkMode ? Color.FromArgb(10, 15, 30) : Color.FromArgb(248, 250, 252);
+            _rtbLog.ForeColor = darkMode ? Color.FromArgb(226, 232, 240) : Color.FromArgb(30, 41, 59);
+            _rtbLog.Font = new Font("Consolas", 9F);
+            _rtbLog.ReadOnly = true;
+            _rtbLog.BorderStyle = BorderStyle.FixedSingle;
+            this.Controls.Add(_rtbLog);
+
+            _progressBar = new ProgressBar();
+            _progressBar.Location = new Point(16, 362);
+            _progressBar.Size = new Size(572, 16);
+            _progressBar.Style = ProgressBarStyle.Blocks;
+            this.Controls.Add(_progressBar);
+
+            _btnUpdate = new Button();
+            _btnUpdate.Text = "Update & Restart";
+            _btnUpdate.Location = new Point(310, 390);
+            _btnUpdate.Size = new Size(160, 34);
+            _btnUpdate.BackColor = Color.FromArgb(37, 99, 235);
+            _btnUpdate.ForeColor = Color.White;
+            _btnUpdate.FlatStyle = FlatStyle.Flat;
+            _btnUpdate.FlatAppearance.BorderSize = 0;
+            _btnUpdate.Font = new Font("Segoe UI Semibold", 9F);
+            _btnUpdate.Cursor = Cursors.Hand;
+            _btnUpdate.Enabled = false;
+            _btnUpdate.Click += (s, e) => StartDownloadAndSelfUpdate();
+            this.Controls.Add(_btnUpdate);
+
+            _btnClose = new Button();
+            _btnClose.Text = "Close";
+            _btnClose.DialogResult = DialogResult.OK;
+            _btnClose.Location = new Point(480, 390);
+            _btnClose.Size = new Size(108, 34);
+            _btnClose.BackColor = btnBg;
+            _btnClose.ForeColor = textPrimary;
+            _btnClose.FlatStyle = FlatStyle.Flat;
+            _btnClose.FlatAppearance.BorderColor = btnBorder;
+            _btnClose.Font = new Font("Segoe UI Semibold", 9F);
+            _btnClose.Cursor = Cursors.Hand;
+            this.Controls.Add(_btnClose);
+
+            this.AcceptButton = _btnUpdate;
+            this.CancelButton = _btnClose;
+
+            this.Shown += (s, e) => RunUpdateCheckAsync();
+        }
+
+        private void AppendLog(string message, Color? color = null)
+        {
+            if (this.InvokeRequired)
+            {
+                this.BeginInvoke((Action)(() => AppendLog(message, color)));
+                return;
+            }
+
+            Color prev = _rtbLog.SelectionColor;
+            if (color.HasValue) _rtbLog.SelectionColor = color.Value;
+            _rtbLog.AppendText(message + "\r\n");
+            _rtbLog.SelectionColor = prev;
+            _rtbLog.ScrollToCaret();
+        }
+
+        private void RunUpdateCheckAsync()
+        {
+            if (_isDownloading) return;
+
+            _btnCheck.Enabled = false;
+            _btnUpdate.Enabled = false;
+            _progressBar.Style = ProgressBarStyle.Marquee;
+            _rtbLog.Clear();
+            AppendLog("[CHECK] Initializing GitHub connection with TLS 1.2 / TLS 1.3...");
+
+            string repo = _txtRepo.Text.Trim();
+            if (string.IsNullOrEmpty(repo))
+            {
+                repo = "mkstewart88/Account-Lockout-Helper";
+                _txtRepo.Text = repo;
+            }
+
+            ThreadPool.QueueUserWorkItem(state =>
+            {
+                string foundVer = null;
+                string foundUrl = null;
+                string releaseName = null;
+                string releaseNotes = null;
+                string logMessage = null;
+                bool isNewer = false;
+
+                try
+                {
+                    // Ensure TLS 1.2 is explicitly allowed in .NET 4.0/4.5
+                    try
+                    {
+                        ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 | SecurityProtocolType.Tls;
+                    }
+                    catch { }
+
+                    // List of repo candidates to check (primary and alternative)
+                    List<string> candidateRepos = new List<string>();
+                    candidateRepos.Add(repo);
+                    if (!repo.Equals("mkstewart88/Domain-Lockout-Helper", StringComparison.OrdinalIgnoreCase))
+                    {
+                        candidateRepos.Add("mkstewart88/Domain-Lockout-Helper");
+                    }
+                    if (!repo.Equals("mkstewart88/Account-Lockout-Helper", StringComparison.OrdinalIgnoreCase))
+                    {
+                        candidateRepos.Add("mkstewart88/Account-Lockout-Helper");
+                    }
+
+                    foreach (string testRepo in candidateRepos)
+                    {
+                        // 1. Check GitHub Releases API
+                        try
+                        {
+                            string apiUrl = string.Format("https://api.github.com/repos/{0}/releases/latest", testRepo);
+                            using (WebClient wc = new WebClient())
+                            {
+                                wc.Headers.Add("User-Agent", "AccountLockoutHelper-Updater");
+                                wc.Headers.Add("Accept", "application/vnd.github.v3+json");
+                                string json = wc.DownloadString(apiUrl);
+
+                                Match tagMatch = Regex.Match(json, "\"tag_name\"\\s*:\\s*\"([^\"]+)\"");
+                                if (tagMatch.Success)
+                                {
+                                    foundVer = tagMatch.Groups[1].Value.TrimStart('v', 'V');
+                                    Match nameMatch = Regex.Match(json, "\"name\"\\s*:\\s*\"([^\"]+)\"");
+                                    if (nameMatch.Success) releaseName = nameMatch.Groups[1].Value;
+
+                                    Match bodyMatch = Regex.Match(json, "\"body\"\\s*:\\s*\"([^\"]+)\"");
+                                    if (bodyMatch.Success) releaseNotes = Regex.Unescape(bodyMatch.Groups[1].Value);
+
+                                    Match exeMatch = Regex.Match(json, "\"browser_download_url\"\\s*:\\s*\"([^\"]+\\.exe)\"");
+                                    if (exeMatch.Success) foundUrl = exeMatch.Groups[1].Value;
+
+                                    repo = testRepo;
+                                    break;
+                                }
+                            }
+                        }
+                        catch { }
+
+                        // 2. Fallback: Check raw repository VERSION file
+                        try
+                        {
+                            string rawUrl = string.Format("https://raw.githubusercontent.com/{0}/main/VERSION", testRepo);
+                            using (WebClient wc = new WebClient())
+                            {
+                                wc.Headers.Add("User-Agent", "AccountLockoutHelper-Updater");
+                                string v = wc.DownloadString(rawUrl);
+                                if (!string.IsNullOrWhiteSpace(v))
+                                {
+                                    foundVer = v.Trim().TrimStart('v', 'V');
+                                    repo = testRepo;
+                                    break;
+                                }
+                            }
+                        }
+                        catch
+                        {
+                            try
+                            {
+                                string rawUrlMaster = string.Format("https://raw.githubusercontent.com/{0}/master/VERSION", testRepo);
+                                using (WebClient wc = new WebClient())
+                                {
+                                    wc.Headers.Add("User-Agent", "AccountLockoutHelper-Updater");
+                                    string v = wc.DownloadString(rawUrlMaster);
+                                    if (!string.IsNullOrWhiteSpace(v))
+                                    {
+                                        foundVer = v.Trim().TrimStart('v', 'V');
+                                        repo = testRepo;
+                                        break;
+                                    }
+                                }
+                            }
+                            catch { }
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(foundVer))
+                    {
+                        isNewer = CompareVersions(foundVer, _currentVersion) > 0;
+                    }
+                    else
+                    {
+                        logMessage = "Could not contact GitHub repository releases or retrieve version tag. Verify internet connection.";
+                    }
+                }
+                catch (Exception ex)
+                {
+                    logMessage = "Error contacting GitHub: " + ex.Message;
+                }
+
+                this.BeginInvoke((Action)(() =>
+                {
+                    _progressBar.Style = ProgressBarStyle.Blocks;
+                    _progressBar.Value = 0;
+                    _btnCheck.Enabled = true;
+
+                    if (!string.IsNullOrEmpty(foundVer))
+                    {
+                        _remoteVersion = foundVer;
+                        _downloadUrl = foundUrl;
+                        _txtRepo.Text = repo;
+
+                        AppendLog(string.Format("[REPOSITORY] Target: https://github.com/{0}", repo));
+                        AppendLog(string.Format("[STATUS] Installed Version: v{0}", _currentVersion));
+                        AppendLog(string.Format("[STATUS] GitHub Latest Version: v{0}", foundVer));
+
+                        if (!string.IsNullOrEmpty(releaseName))
+                        {
+                            AppendLog(string.Format("[RELEASE] {0}", releaseName), Color.FromArgb(37, 99, 235));
+                        }
+
+                        if (isNewer)
+                        {
+                            AppendLog("\r\n>>> NEW VERSION AVAILABLE! <<<", Color.FromArgb(22, 163, 74));
+                            AppendLog("Click 'Update & Restart' below to pull the latest version and restart the application.");
+                            _btnUpdate.Text = string.Format("Update to v{0} & Restart", foundVer);
+                            _btnUpdate.Enabled = true;
+                        }
+                        else
+                        {
+                            AppendLog("\r\n[UP TO DATE] You are running the latest version of Account Lockout Helper.", Color.FromArgb(22, 163, 74));
+                            AppendLog("You can still click 'Reinstall & Restart' to force re-download and re-compile the latest build.");
+                            _btnUpdate.Text = "Reinstall & Restart";
+                            _btnUpdate.Enabled = true;
+                        }
+
+                        if (!string.IsNullOrEmpty(releaseNotes))
+                        {
+                            AppendLog("\r\n--- Release Notes ---");
+                            AppendLog(releaseNotes.Trim());
+                        }
+                    }
+                    else
+                    {
+                        AppendLog("[ERROR] " + (logMessage ?? "No release found on GitHub. Check repository name and connection."), Color.FromArgb(220, 38, 38));
+                    }
+                }));
+            });
+        }
+
+        private static int CompareVersions(string v1, string v2)
+        {
+            try
+            {
+                string c1 = Regex.Replace(v1, @"[^\d\.]", "").Trim();
+                string c2 = Regex.Replace(v2, @"[^\d\.]", "").Trim();
+                Version ver1 = new Version(c1);
+                Version ver2 = new Version(c2);
+                return ver1.CompareTo(ver2);
+            }
+            catch
+            {
+                return string.Compare(v1, v2, StringComparison.OrdinalIgnoreCase);
+            }
+        }
+
+        private void StartDownloadAndSelfUpdate()
+        {
+            if (_isDownloading) return;
+            _isDownloading = true;
+            _btnCheck.Enabled = false;
+            _btnUpdate.Enabled = false;
+            _btnClose.Enabled = false;
+            _progressBar.Style = ProgressBarStyle.Marquee;
+
+            string repo = _txtRepo.Text.Trim();
+            string exeDownloadUrl = _downloadUrl;
+
+            AppendLog("\r\n========================================================");
+            AppendLog("[UPDATE] Starting update process...");
+
+            ThreadPool.QueueUserWorkItem(state =>
+            {
+                string tempDir = Path.GetTempPath();
+                string newExePath = Path.Combine(tempDir, "AccountLockoutHelper_new.exe");
+                string error = null;
+
+                try
+                {
+                    // Ensure TLS 1.2
+                    try { ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072 | SecurityProtocolType.Tls; } catch { }
+
+                    bool downloadSuccess = false;
+
+                    // Option A: Direct download if an .exe release asset was found
+                    if (!string.IsNullOrEmpty(exeDownloadUrl))
+                    {
+                        AppendLog("[DOWNLOAD] Downloading compiled executable asset from GitHub...");
+                        using (WebClient wc = new WebClient())
+                        {
+                            wc.Headers.Add("User-Agent", "AccountLockoutHelper-Updater");
+                            wc.DownloadFile(exeDownloadUrl, newExePath);
+                            if (File.Exists(newExePath) && new FileInfo(newExePath).Length > 10000)
+                            {
+                                downloadSuccess = true;
+                                AppendLog("[DOWNLOAD] Binary download complete (" + new FileInfo(newExePath).Length + " bytes).");
+                            }
+                        }
+                    }
+
+                    // Option B: If no .exe asset in releases, download Program-Code.cs and compile with local csc.exe
+                    if (!downloadSuccess)
+                    {
+                        AppendLog("[PULL] Pulling source code (Program-Code.cs) from GitHub...");
+                        string rawCsUrl = string.Format("https://raw.githubusercontent.com/{0}/main/Program-Code.cs", repo);
+                        string tempCsPath = Path.Combine(tempDir, "Program-Code_new.cs");
+
+                        using (WebClient wc = new WebClient())
+                        {
+                            wc.Headers.Add("User-Agent", "AccountLockoutHelper-Updater");
+                            try
+                            {
+                                wc.DownloadFile(rawCsUrl, tempCsPath);
+                            }
+                            catch
+                            {
+                                string rawCsMaster = string.Format("https://raw.githubusercontent.com/{0}/master/Program-Code.cs", repo);
+                                wc.DownloadFile(rawCsMaster, tempCsPath);
+                            }
+                        }
+
+                        if (!File.Exists(tempCsPath) || new FileInfo(tempCsPath).Length < 5000)
+                        {
+                            throw new Exception("Downloaded Program-Code.cs file is missing or corrupt.");
+                        }
+
+                        AppendLog("[COMPILE] Compiling updated code natively using Microsoft C# compiler (csc.exe)...");
+
+                        string sysRoot = Environment.GetEnvironmentVariable("SystemRoot");
+                        if (string.IsNullOrEmpty(sysRoot)) sysRoot = "C:\\Windows";
+                        string cscPath = Path.Combine(sysRoot, @"Microsoft.NET\Framework64\v4.0.30319\csc.exe");
+                        if (!File.Exists(cscPath))
+                        {
+                            cscPath = Path.Combine(sysRoot, @"Microsoft.NET\Framework\v4.0.30319\csc.exe");
+                        }
+
+                        if (!File.Exists(cscPath))
+                        {
+                            throw new Exception("Could not locate csc.exe compiler in Microsoft.NET Framework v4.0.30319.");
+                        }
+
+                        string cscArgs = string.Format(
+                            "/target:winexe /platform:anycpu /optimize+ /out:\"{0}\" \"{1}\" /reference:System.dll,System.Core.dll,System.DirectoryServices.dll,System.DirectoryServices.AccountManagement.dll,System.Windows.Forms.dll,System.Drawing.dll",
+                            newExePath,
+                            tempCsPath);
+
+                        ProcessStartInfo cscPsi = new ProcessStartInfo(cscPath, cscArgs);
+                        cscPsi.CreateNoWindow = true;
+                        cscPsi.UseShellExecute = false;
+                        cscPsi.RedirectStandardOutput = true;
+                        cscPsi.RedirectStandardError = true;
+
+                        using (Process cscProc = Process.Start(cscPsi))
+                        {
+                            string cscOut = cscProc.StandardOutput.ReadToEnd();
+                            string cscErr = cscProc.StandardError.ReadToEnd();
+                            cscProc.WaitForExit();
+
+                            if (cscProc.ExitCode != 0 || !File.Exists(newExePath))
+                            {
+                                throw new Exception("Compilation failed (Exit " + cscProc.ExitCode + "):\r\n" + cscOut + "\r\n" + cscErr);
+                            }
+                        }
+
+                        AppendLog("[COMPILE] Compilation succeeded: New AccountLockoutHelper.exe generated.");
+                        try { File.Delete(tempCsPath); } catch { }
+                    }
+
+                    // Perform in-place hot swap and restart
+                    string currentExePath = Application.ExecutablePath;
+                    AppendLog("[SWAP] Preparing hot-swap launcher script...");
+
+                    string launcherCmd = Path.Combine(tempDir, "ALH_SelfUpdate_" + Guid.NewGuid().ToString("N").Substring(0, 8) + ".cmd");
+                    string cmdScript = string.Format(
+                        "@echo off\r\n" +
+                        "chcp 65001 > nul\r\n" +
+                        "title Updating Account Lockout Helper...\r\n" +
+                        "ping 127.0.0.1 -n 3 > nul\r\n" +
+                        "copy /y \"{0}\" \"{1}\" > nul\r\n" +
+                        "if errorlevel 1 (\r\n" +
+                        "    ping 127.0.0.1 -n 3 > nul\r\n" +
+                        "    copy /y \"{0}\" \"{1}\" > nul\r\n" +
+                        ")\r\n" +
+                        "del \"{0}\" > nul 2>&1\r\n" +
+                        "start \"\" \"{1}\"\r\n" +
+                        "del \"%~f0\" > nul 2>&1\r\n",
+                        newExePath,
+                        currentExePath);
+
+                    File.WriteAllText(launcherCmd, cmdScript);
+
+                    AppendLog("[RESTART] Spawning launcher and restarting application...", Color.FromArgb(22, 163, 74));
+
+                    ProcessStartInfo restartPsi = new ProcessStartInfo("cmd.exe", "/c \"" + launcherCmd + "\"");
+                    restartPsi.CreateNoWindow = true;
+                    restartPsi.WindowStyle = ProcessWindowStyle.Hidden;
+                    restartPsi.UseShellExecute = false;
+                    Process.Start(restartPsi);
+
+                    Thread.Sleep(500);
+
+                    this.BeginInvoke((Action)(() =>
+                    {
+                        Application.Exit();
+                        Environment.Exit(0);
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    error = ex.Message;
+                    this.BeginInvoke((Action)(() =>
+                    {
+                        _isDownloading = false;
+                        _btnCheck.Enabled = true;
+                        _btnUpdate.Enabled = true;
+                        _btnClose.Enabled = true;
+                        _progressBar.Style = ProgressBarStyle.Blocks;
+                        AppendLog("[FAILED] Update error: " + error, Color.FromArgb(220, 38, 38));
+                    }));
+                }
+            });
         }
     }
 }

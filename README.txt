@@ -29,6 +29,9 @@ STEP 2: RUN "AccountLockoutHelper.exe"
    or Windows PC. Supports domain-joined PCs (auto-discovery) as well as
    non-domain joined machines via the top-right "Switch Domain / Auth" button
    (remembers target domain and username across restarts; passwords are never saved).
+4. In-App GitHub Updates: Click "Update" in the top-right header to check
+   GitHub for newer versions. When an update is detected, it pulls the new build,
+   hot-swaps the running executable in-place, and automatically restarts.
 
 MANUAL C# COMPILATION
 -----------------------------------------------------------------------

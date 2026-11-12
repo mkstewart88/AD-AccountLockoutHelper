@@ -26,6 +26,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added an authentication mode indicator (`[Integrated Auth]` vs. `[Auth: DOMAIN\username]`) to the status strip with color-coded status highlights.
 - **Graceful Non-Domain Startup Prompt:**
   - When started on a computer that is not joined to a domain or where Domain Controllers cannot be contacted, the tool prompts the operator to specify target domain credentials directly.
+- **GitHub In-App Updater & Self-Replacement Engine:**
+  - Added a dedicated **"Update"** button in the top-right header panel of the application.
+  - Automatically queries GitHub releases and the raw repository manifest over TLS 1.2 to compare the local installed version with the latest release.
+  - Displays installed version vs. GitHub latest release, release titles, and full release notes.
+  - Dual-mode update delivery: directly downloads precompiled `.exe` binary assets or pulls updated `Program-Code.cs` and compiles it natively using the local Microsoft C# compiler (`csc.exe`) in ~2 seconds.
+  - Automatic in-place binary hot-swap and application restart via a detached self-deleting launcher script.
+  - Remembers target GitHub repository settings in `HKCU\Software\AccountLockoutHelper` (defaults to `mkstewart88/Account-Lockout-Helper` with automatic fallback to `mkstewart88/Domain-Lockout-Helper`).
 - **Full Remediation Tool Compatibility:**
   - Ensured account unlocking, administrative password resets, targeted Active Directory computer inspections, and remote security event log queries seamlessly route through the active credentials.
 
