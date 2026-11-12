@@ -93,6 +93,13 @@ BUILT-IN FORENSIC CAPABILITIES:
   "Previously Locked Out" shows accounts with recent lockout events that are now
   unlocked. Accounts with 0 events and disabled accounts are cleanly excluded.
 
+* Top-Right Header Actions & GitHub In-App Updater:
+  - [GitHub]: Quick one-click access to the GitHub repository in default browser.
+  - [Update]: Automatic version checker with scrollable Changelog popup dialog.
+    "Update & Restart" pulls files, hot-swaps the binary in-place, and restarts!
+  - [Dark Mode] & [Switch Domain / Auth]: Switch themes and connect with saved credentials.
+  - [Refresh Forensics (F5)]: Primary isolated blue button for instant forensic refresh.
+
 ================================================================================
 WHAT EACH FILE IS FOR:
 ================================================================================

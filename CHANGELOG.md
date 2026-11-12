@@ -10,6 +10,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.2.0] - 2026-11-06
 
 ### Added
+- **Top-Right GitHub Repository Quick-Access:**
+  - Added a dedicated **"GitHub"** button in the top-right header panel of the compiled executable.
+  - One-click access to the official project repository (`mkstewart88/AD-AccountLockoutHelper`) in the operator's default web browser.
+- **Header Button Grouping & Distinguishability:**
+  - Distinct visual button grouping for enhanced usability and workflow clarity:
+    - **Group 1 (Repository & Updates):** `[GitHub]` and `[Update]` grouped together.
+    - **Group 2 (Settings & Environment):** `[Dark Mode]` and `[Switch Domain / Auth]` grouped together.
+    - **Group 3 (Primary Action):** `[Refresh Forensics (F5)]` remains standalone in bold blue with high-contrast emphasis.
+  - Streamlined header layout: Removed verbose subtitle banner to maximize screen space and provide clean vertical alignment.
+- **Interactive Changelog & Release Notes Modal (`ChangelogDialog`):**
+  - Added an automatic scrollable popup dialog displaying full release notes and changelog whenever an update is detected.
+  - Includes a prominent "OK" dismissal button and supports standard window close ("X"), Enter, or Esc keys.
+  - Includes a "View Changelog" button in the update dialog for on-demand review of release notes.
+- **GitHub In-App Updater & Self-Replacement Engine:**
+  - Added a dedicated **"Update"** button in the top-right header panel of the application.
+  - Resolved repository endpoint mapping to `mkstewart88/AD-AccountLockoutHelper` with candidate fallback support.
+  - Fixed Windows Forms ampersand accelerator mnemonic bug to ensure button text explicitly renders as **"Update & Restart"** (not "Update Restart").
+  - Automatically queries GitHub releases and raw repository files over TLS 1.2 to compare the local installed version with the latest release.
+  - Dual-mode update delivery: directly downloads precompiled `.exe` binary assets or pulls updated `Program-Code.cs` and compiles it natively using the local Microsoft C# compiler (`csc.exe`) in ~2 seconds.
+  - Automatic in-place binary hot-swap and application restart via a detached self-deleting launcher script (`ALH_SelfUpdate_*.cmd`).
+  - Remembers target GitHub repository settings in `HKCU\Software\AccountLockoutHelper` with automatic migration from legacy repository identifiers.
 - **Non-Domain Joined Computer Support:**
   - Added native support to execute the application from non-domain joined workstations, support laptops, jump boxes, and home lab systems without requiring the host machine to be joined to the target Active Directory domain.
   - Retains 100% backward-compatible default behavior: automatically discovers and queries the local machine's joined domain on startup using integrated Windows authentication.
@@ -26,13 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Added an authentication mode indicator (`[Integrated Auth]` vs. `[Auth: DOMAIN\username]`) to the status strip with color-coded status highlights.
 - **Graceful Non-Domain Startup Prompt:**
   - When started on a computer that is not joined to a domain or where Domain Controllers cannot be contacted, the tool prompts the operator to specify target domain credentials directly.
-- **GitHub In-App Updater & Self-Replacement Engine:**
-  - Added a dedicated **"Update"** button in the top-right header panel of the application.
-  - Automatically queries GitHub releases and the raw repository manifest over TLS 1.2 to compare the local installed version with the latest release.
-  - Displays installed version vs. GitHub latest release, release titles, and full release notes.
-  - Dual-mode update delivery: directly downloads precompiled `.exe` binary assets or pulls updated `Program-Code.cs` and compiles it natively using the local Microsoft C# compiler (`csc.exe`) in ~2 seconds.
-  - Automatic in-place binary hot-swap and application restart via a detached self-deleting launcher script.
-  - Remembers target GitHub repository settings in `HKCU\Software\AccountLockoutHelper` (defaults to `mkstewart88/Account-Lockout-Helper` with automatic fallback to `mkstewart88/Domain-Lockout-Helper`).
 - **Full Remediation Tool Compatibility:**
   - Ensured account unlocking, administrative password resets, targeted Active Directory computer inspections, and remote security event log queries seamlessly route through the active credentials.
 

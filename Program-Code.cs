@@ -210,7 +210,8 @@ namespace DomainLockoutHelper
 
         // Application Updater & GitHub Configuration
         public const string APP_VERSION = "1.2.0";
-        private string _savedGitHubRepo = "mkstewart88/Account-Lockout-Helper";
+        private string _savedGitHubRepo = "mkstewart88/AD-AccountLockoutHelper";
+        private Button _btnGitHub;
         private Button _btnUpdate;
 
         // UI Controls - Column 1: Accounts
@@ -249,7 +250,6 @@ namespace DomainLockoutHelper
         private Button _btnThemeToggle;
         private Panel _headerPanel;
         private Label _lblTitle;
-        private Label _lblSub;
         private StatusStrip _statusStrip;
         private ToolTip _toolTip;
 
@@ -298,20 +298,28 @@ namespace DomainLockoutHelper
             lblTitle.Font = new Font("Segoe UI", 16F, FontStyle.Bold);
             lblTitle.ForeColor = Color.FromArgb(15, 23, 42);
             lblTitle.AutoSize = true;
-            lblTitle.Location = new Point(12, 6);
+            lblTitle.Location = new Point(14, 18);
 
-            Label lblSub = new Label();
-            lblSub.Text = "Investigate currently locked-out accounts, review caller computers, inspect remote sessions via QUSER, and unlock accounts / reboot PCs.";
-            lblSub.Font = new Font("Segoe UI", 9F);
-            lblSub.ForeColor = Color.FromArgb(100, 116, 139);
-            lblSub.AutoSize = true;
-            lblSub.Location = new Point(14, 38);
+            // Group 1: Repository & Updater
+            _btnGitHub = new Button();
+            _btnGitHub.Text = "GitHub";
+            _btnGitHub.Size = new Size(85, 34);
+            _btnGitHub.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _btnGitHub.Location = new Point(headerPanel.Width - 700, 16);
+            _btnGitHub.BackColor = Color.FromArgb(241, 245, 249);
+            _btnGitHub.ForeColor = Color.FromArgb(15, 23, 42);
+            _btnGitHub.FlatStyle = FlatStyle.Flat;
+            _btnGitHub.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            _btnGitHub.Font = new Font("Segoe UI Semibold", 9F);
+            _btnGitHub.Cursor = Cursors.Hand;
+            _btnGitHub.Click += (s, e) => OpenGitHubClick(s, e);
+            _toolTip.SetToolTip(_btnGitHub, "Open GitHub repository in your default web browser.");
 
             _btnUpdate = new Button();
             _btnUpdate.Text = "Update";
-            _btnUpdate.Size = new Size(95, 34);
+            _btnUpdate.Size = new Size(90, 34);
             _btnUpdate.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _btnUpdate.Location = new Point(headerPanel.Width - 625, 16);
+            _btnUpdate.Location = new Point(headerPanel.Width - 610, 16);
             _btnUpdate.BackColor = Color.FromArgb(241, 245, 249);
             _btnUpdate.ForeColor = Color.FromArgb(15, 23, 42);
             _btnUpdate.FlatStyle = FlatStyle.Flat;
@@ -319,27 +327,14 @@ namespace DomainLockoutHelper
             _btnUpdate.Font = new Font("Segoe UI Semibold", 9F);
             _btnUpdate.Cursor = Cursors.Hand;
             _btnUpdate.Click += (s, e) => CheckForUpdatesClick(s, e);
-            _toolTip.SetToolTip(_btnUpdate, "Check GitHub for the latest release, pull updates, and restart the executable.");
+            _toolTip.SetToolTip(_btnUpdate, "Check GitHub for the latest release, view release changelog, pull updates, and restart the executable.");
 
-            _btnSwitchDomain = new Button();
-            _btnSwitchDomain.Text = "Switch Domain / Auth";
-            _btnSwitchDomain.Size = new Size(165, 34);
-            _btnSwitchDomain.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _btnSwitchDomain.Location = new Point(headerPanel.Width - 520, 16);
-            _btnSwitchDomain.BackColor = Color.FromArgb(241, 245, 249);
-            _btnSwitchDomain.ForeColor = Color.FromArgb(15, 23, 42);
-            _btnSwitchDomain.FlatStyle = FlatStyle.Flat;
-            _btnSwitchDomain.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
-            _btnSwitchDomain.Font = new Font("Segoe UI Semibold", 9F);
-            _btnSwitchDomain.Cursor = Cursors.Hand;
-            _btnSwitchDomain.Click += (s, e) => SwitchDomainClick(s, e);
-            _toolTip.SetToolTip(_btnSwitchDomain, "Connect to a target domain or enter credentials (supports non-domain joined computers).");
-
+            // Group 2: Display & Environment
             _btnThemeToggle = new Button();
             _btnThemeToggle.Text = "Dark Mode";
-            _btnThemeToggle.Size = new Size(125, 34);
+            _btnThemeToggle.Size = new Size(110, 34);
             _btnThemeToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _btnThemeToggle.Location = new Point(headerPanel.Width - 345, 16);
+            _btnThemeToggle.Location = new Point(headerPanel.Width - 495, 16);
             _btnThemeToggle.BackColor = Color.FromArgb(241, 245, 249);
             _btnThemeToggle.ForeColor = Color.FromArgb(15, 23, 42);
             _btnThemeToggle.FlatStyle = FlatStyle.Flat;
@@ -349,11 +344,26 @@ namespace DomainLockoutHelper
             _btnThemeToggle.Click += (s, e) => ToggleDarkMode();
             _toolTip.SetToolTip(_btnThemeToggle, "Toggle between Dark Mode and Light Mode for server rooms and low-light environments.");
 
+            _btnSwitchDomain = new Button();
+            _btnSwitchDomain.Text = "Switch Domain / Auth";
+            _btnSwitchDomain.Size = new Size(160, 34);
+            _btnSwitchDomain.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _btnSwitchDomain.Location = new Point(headerPanel.Width - 380, 16);
+            _btnSwitchDomain.BackColor = Color.FromArgb(241, 245, 249);
+            _btnSwitchDomain.ForeColor = Color.FromArgb(15, 23, 42);
+            _btnSwitchDomain.FlatStyle = FlatStyle.Flat;
+            _btnSwitchDomain.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+            _btnSwitchDomain.Font = new Font("Segoe UI Semibold", 9F);
+            _btnSwitchDomain.Cursor = Cursors.Hand;
+            _btnSwitchDomain.Click += (s, e) => SwitchDomainClick(s, e);
+            _toolTip.SetToolTip(_btnSwitchDomain, "Connect to a target domain or enter credentials (supports non-domain joined computers).");
+
+            // Group 3: Primary Standalone Action
             Button btnQuickRefresh = new Button();
             btnQuickRefresh.Text = "Refresh Forensics (F5)";
-            btnQuickRefresh.Size = new Size(195, 34);
+            btnQuickRefresh.Size = new Size(180, 34);
             btnQuickRefresh.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            btnQuickRefresh.Location = new Point(headerPanel.Width - 210, 16);
+            btnQuickRefresh.Location = new Point(headerPanel.Width - 195, 16);
             btnQuickRefresh.BackColor = Color.FromArgb(37, 99, 235);
             btnQuickRefresh.ForeColor = Color.White;
             btnQuickRefresh.FlatStyle = FlatStyle.Flat;
@@ -361,16 +371,16 @@ namespace DomainLockoutHelper
             btnQuickRefresh.Font = new Font("Segoe UI Semibold", 9F);
             btnQuickRefresh.Cursor = Cursors.Hand;
             btnQuickRefresh.Click += (s, e) => StartRefreshAsync();
+            _toolTip.SetToolTip(btnQuickRefresh, "Execute full Active Directory forensic query and refresh all panels (F5).");
 
             _headerPanel = headerPanel;
             _lblTitle = lblTitle;
-            _lblSub = lblSub;
 
             headerPanel.Controls.Add(lblTitle);
-            headerPanel.Controls.Add(lblSub);
+            headerPanel.Controls.Add(_btnGitHub);
             headerPanel.Controls.Add(_btnUpdate);
-            headerPanel.Controls.Add(_btnSwitchDomain);
             headerPanel.Controls.Add(_btnThemeToggle);
+            headerPanel.Controls.Add(_btnSwitchDomain);
             headerPanel.Controls.Add(btnQuickRefresh);
             mainLayout.Controls.Add(headerPanel, 0, 0);
 
@@ -786,6 +796,12 @@ namespace DomainLockoutHelper
             {
                 _btnThemeToggle.Text = dark ? "Light Mode" : "Dark Mode";
             }
+            if (_btnGitHub != null)
+            {
+                _btnGitHub.BackColor = dark ? Color.FromArgb(51, 65, 85) : Color.FromArgb(241, 245, 249);
+                _btnGitHub.ForeColor = dark ? Color.FromArgb(241, 245, 249) : Color.FromArgb(15, 23, 42);
+                _btnGitHub.FlatAppearance.BorderColor = dark ? Color.FromArgb(71, 85, 105) : Color.FromArgb(203, 213, 225);
+            }
             if (_btnUpdate != null)
             {
                 _btnUpdate.BackColor = dark ? Color.FromArgb(51, 65, 85) : Color.FromArgb(241, 245, 249);
@@ -859,7 +875,6 @@ namespace DomainLockoutHelper
                 else if (ctrl is Label)
                 {
                     if (ctrl == _lblTitle) ctrl.ForeColor = textPrimary;
-                    else if (ctrl == _lblSub) ctrl.ForeColor = textSecondary;
                     else ctrl.ForeColor = textSecondary;
                 }
                 else if (ctrl is Button)
@@ -974,6 +989,12 @@ namespace DomainLockoutHelper
                 }
                 catch { }
             }
+
+            // Auto-migrate legacy repository name to actual GitHub repository
+            if (string.IsNullOrEmpty(_savedGitHubRepo) || _savedGitHubRepo.Equals("mkstewart88/Account-Lockout-Helper", StringComparison.OrdinalIgnoreCase))
+            {
+                _savedGitHubRepo = "mkstewart88/AD-AccountLockoutHelper";
+            }
         }
 
         private void SaveSettings(string domain, string username, string repo = null)
@@ -991,7 +1012,7 @@ namespace DomainLockoutHelper
                     {
                         key.SetValue("LastDomain", _savedDomain, RegistryValueKind.String);
                         key.SetValue("LastUsername", _savedUsername, RegistryValueKind.String);
-                        key.SetValue("LastGitHubRepo", _savedGitHubRepo ?? "mkstewart88/Account-Lockout-Helper", RegistryValueKind.String);
+                        key.SetValue("LastGitHubRepo", _savedGitHubRepo ?? "mkstewart88/AD-AccountLockoutHelper", RegistryValueKind.String);
                     }
                 }
             }
@@ -1172,6 +1193,22 @@ namespace DomainLockoutHelper
                     // Once connected, start the search over with new credentials
                     StartRefreshAsync();
                 }
+            }
+        }
+
+        private void OpenGitHubClick(object sender, EventArgs e)
+        {
+            try
+            {
+                string target = string.IsNullOrEmpty(_savedGitHubRepo) ? "mkstewart88/AD-AccountLockoutHelper" : _savedGitHubRepo.Trim();
+                string url = target.StartsWith("http://", StringComparison.OrdinalIgnoreCase) || target.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+                    ? target
+                    : "https://github.com/" + target;
+                Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "Could not open GitHub repository in browser: " + ex.Message, "GitHub Link", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
         }
 
@@ -3620,6 +3657,105 @@ namespace DomainLockoutHelper
     }
 
     // -------------------------------------------------------------
+    // CHANGELOG & RELEASE NOTES POPUP DIALOG
+    // -------------------------------------------------------------
+    public class ChangelogDialog : Form
+    {
+        public ChangelogDialog(string newVersion, string changelogText, bool darkMode)
+        {
+            this.Text = string.Format("Account Lockout Helper - What's New in v{0}", newVersion);
+            this.Size = new Size(640, 520);
+            this.MinimumSize = new Size(500, 360);
+            this.StartPosition = FormStartPosition.CenterParent;
+            this.FormBorderStyle = FormBorderStyle.Sizable;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
+            this.Font = new Font("Segoe UI", 9F);
+
+            Color bg = darkMode ? Color.FromArgb(15, 23, 42) : Color.FromArgb(243, 246, 250);
+            Color surface = darkMode ? Color.FromArgb(30, 41, 59) : Color.White;
+            Color textPrimary = darkMode ? Color.FromArgb(241, 245, 249) : Color.FromArgb(15, 23, 42);
+            Color textSecondary = darkMode ? Color.FromArgb(148, 163, 184) : Color.FromArgb(100, 116, 139);
+            Color inputBg = darkMode ? Color.FromArgb(15, 23, 42) : Color.White;
+
+            this.BackColor = bg;
+            this.ForeColor = textPrimary;
+
+            TableLayoutPanel layout = new TableLayoutPanel();
+            layout.Dock = DockStyle.Fill;
+            layout.ColumnCount = 1;
+            layout.RowCount = 3;
+            layout.Padding = new Padding(16);
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 60F));  // Header
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100F)); // Changelog RichText
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 50F));  // Footer with OK button
+            this.Controls.Add(layout);
+
+            // 1. Header Banner
+            Panel headerPanel = new Panel();
+            headerPanel.Dock = DockStyle.Fill;
+            headerPanel.BackColor = surface;
+            headerPanel.BorderStyle = BorderStyle.FixedSingle;
+
+            Label lblTitle = new Label();
+            lblTitle.Text = string.Format("Version {0} is Available!", newVersion);
+            lblTitle.Font = new Font("Segoe UI", 11.5F, FontStyle.Bold);
+            lblTitle.ForeColor = textPrimary;
+            lblTitle.Location = new Point(14, 8);
+            lblTitle.AutoSize = true;
+            headerPanel.Controls.Add(lblTitle);
+
+            Label lblSub = new Label();
+            lblSub.Text = "Please review the changelog and release notes below before updating:";
+            lblSub.Font = new Font("Segoe UI", 9F);
+            lblSub.ForeColor = textSecondary;
+            lblSub.Location = new Point(15, 33);
+            lblSub.AutoSize = true;
+            headerPanel.Controls.Add(lblSub);
+
+            layout.Controls.Add(headerPanel, 0, 0);
+
+            // 2. Scrollable Changelog RichTextBox
+            RichTextBox rtbChangelog = new RichTextBox();
+            rtbChangelog.Dock = DockStyle.Fill;
+            rtbChangelog.BackColor = inputBg;
+            rtbChangelog.ForeColor = textPrimary;
+            rtbChangelog.Font = new Font("Segoe UI", 9.5F);
+            rtbChangelog.ReadOnly = true;
+            rtbChangelog.BorderStyle = BorderStyle.FixedSingle;
+            rtbChangelog.ScrollBars = RichTextBoxScrollBars.Vertical;
+            rtbChangelog.Text = string.IsNullOrEmpty(changelogText)
+                ? string.Format("No detailed changelog provided for version {0}.", newVersion)
+                : changelogText.Replace("\r\n", "\n").Replace("\n", "\r\n");
+            layout.Controls.Add(rtbChangelog, 0, 1);
+
+            // 3. Footer with OK button
+            Panel footerPanel = new Panel();
+            footerPanel.Dock = DockStyle.Fill;
+
+            Button btnOk = new Button();
+            btnOk.Text = "OK";
+            btnOk.DialogResult = DialogResult.OK;
+            btnOk.Size = new Size(110, 34);
+            btnOk.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+            btnOk.Location = new Point(footerPanel.Width - 110, 8);
+            btnOk.BackColor = Color.FromArgb(37, 99, 235);
+            btnOk.ForeColor = Color.White;
+            btnOk.FlatStyle = FlatStyle.Flat;
+            btnOk.FlatAppearance.BorderSize = 0;
+            btnOk.Font = new Font("Segoe UI Semibold", 9F);
+            btnOk.Cursor = Cursors.Hand;
+            footerPanel.Controls.Add(btnOk);
+
+            layout.Controls.Add(footerPanel, 0, 2);
+
+            this.AcceptButton = btnOk;
+            this.CancelButton = btnOk;
+        }
+    }
+
+    // -------------------------------------------------------------
     // GITHUB APPLICATION UPDATER & SELF-REPLACEMENT DIALOG
     // -------------------------------------------------------------
     public class UpdateDialog : Form
@@ -3629,10 +3765,12 @@ namespace DomainLockoutHelper
         private ProgressBar _progressBar;
         private Button _btnCheck;
         private Button _btnUpdate;
+        private Button _btnViewChangelog;
         private Button _btnClose;
         private string _currentVersion;
         private string _remoteVersion = null;
         private string _downloadUrl = null;
+        private string _latestChangelog = null;
         private bool _isDownloading = false;
         private bool _darkMode;
 
@@ -3693,17 +3831,17 @@ namespace DomainLockoutHelper
             topPanel.Controls.Add(lblRepo);
 
             _txtRepo = new TextBox();
-            _txtRepo.Text = string.IsNullOrEmpty(initialRepo) ? "mkstewart88/Account-Lockout-Helper" : initialRepo;
+            _txtRepo.Text = string.IsNullOrEmpty(initialRepo) ? "mkstewart88/AD-AccountLockoutHelper" : initialRepo;
             _txtRepo.Location = new Point(205, 73);
-            _txtRepo.Size = new Size(260, 23);
+            _txtRepo.Size = new Size(235, 23);
             _txtRepo.BackColor = inputBg;
             _txtRepo.ForeColor = textPrimary;
             topPanel.Controls.Add(_txtRepo);
 
             _btnCheck = new Button();
-            _btnCheck.Text = "Check";
-            _btnCheck.Location = new Point(475, 71);
-            _btnCheck.Size = new Size(82, 27);
+            _btnCheck.Text = "Check for Updates";
+            _btnCheck.Location = new Point(445, 71);
+            _btnCheck.Size = new Size(118, 27);
             _btnCheck.BackColor = btnBg;
             _btnCheck.ForeColor = textPrimary;
             _btnCheck.FlatStyle = FlatStyle.Flat;
@@ -3731,7 +3869,22 @@ namespace DomainLockoutHelper
             _progressBar.Style = ProgressBarStyle.Blocks;
             this.Controls.Add(_progressBar);
 
+            _btnViewChangelog = new Button();
+            _btnViewChangelog.Text = "View Changelog";
+            _btnViewChangelog.Location = new Point(16, 390);
+            _btnViewChangelog.Size = new Size(135, 34);
+            _btnViewChangelog.BackColor = btnBg;
+            _btnViewChangelog.ForeColor = textPrimary;
+            _btnViewChangelog.FlatStyle = FlatStyle.Flat;
+            _btnViewChangelog.FlatAppearance.BorderColor = btnBorder;
+            _btnViewChangelog.Font = new Font("Segoe UI Semibold", 9F);
+            _btnViewChangelog.Cursor = Cursors.Hand;
+            _btnViewChangelog.Visible = false;
+            _btnViewChangelog.Click += (s, e) => ShowChangelogPopup();
+            this.Controls.Add(_btnViewChangelog);
+
             _btnUpdate = new Button();
+            _btnUpdate.UseMnemonic = false;
             _btnUpdate.Text = "Update & Restart";
             _btnUpdate.Location = new Point(310, 390);
             _btnUpdate.Size = new Size(160, 34);
@@ -3779,6 +3932,31 @@ namespace DomainLockoutHelper
             _rtbLog.ScrollToCaret();
         }
 
+        private void ShowChangelogPopup()
+        {
+            try
+            {
+                string ver = _remoteVersion ?? _currentVersion;
+                string notes = _latestChangelog;
+                if (string.IsNullOrEmpty(notes))
+                {
+                    notes = string.Format(
+                        "Account Lockout Helper v{0}\r\n\r\n" +
+                        "- Non-Domain Joined Computer Support\r\n" +
+                        "- Switch Domain / Auth dialog with credential persistence\r\n" +
+                        "- In-app GitHub Updater & Hot-Swap restart engine\r\n" +
+                        "- Enhanced button grouping and direct GitHub repository access\r\n",
+                        ver);
+                }
+
+                using (ChangelogDialog dlg = new ChangelogDialog(ver, notes, _darkMode))
+                {
+                    dlg.ShowDialog(this);
+                }
+            }
+            catch { }
+        }
+
         private void RunUpdateCheckAsync()
         {
             if (_isDownloading) return;
@@ -3792,7 +3970,7 @@ namespace DomainLockoutHelper
             string repo = _txtRepo.Text.Trim();
             if (string.IsNullOrEmpty(repo))
             {
-                repo = "mkstewart88/Account-Lockout-Helper";
+                repo = "mkstewart88/AD-AccountLockoutHelper";
                 _txtRepo.Text = repo;
             }
 
@@ -3817,13 +3995,17 @@ namespace DomainLockoutHelper
                     // List of repo candidates to check (primary and alternative)
                     List<string> candidateRepos = new List<string>();
                     candidateRepos.Add(repo);
-                    if (!repo.Equals("mkstewart88/Domain-Lockout-Helper", StringComparison.OrdinalIgnoreCase))
+                    if (!candidateRepos.Contains("mkstewart88/AD-AccountLockoutHelper"))
                     {
-                        candidateRepos.Add("mkstewart88/Domain-Lockout-Helper");
+                        candidateRepos.Add("mkstewart88/AD-AccountLockoutHelper");
                     }
-                    if (!repo.Equals("mkstewart88/Account-Lockout-Helper", StringComparison.OrdinalIgnoreCase))
+                    if (!candidateRepos.Contains("mkstewart88/Account-Lockout-Helper"))
                     {
                         candidateRepos.Add("mkstewart88/Account-Lockout-Helper");
+                    }
+                    if (!candidateRepos.Contains("mkstewart88/Domain-Lockout-Helper"))
+                    {
+                        candidateRepos.Add("mkstewart88/Domain-Lockout-Helper");
                     }
 
                     foreach (string testRepo in candidateRepos)
@@ -3852,46 +4034,90 @@ namespace DomainLockoutHelper
                                     if (exeMatch.Success) foundUrl = exeMatch.Groups[1].Value;
 
                                     repo = testRepo;
-                                    break;
                                 }
                             }
                         }
                         catch { }
 
-                        // 2. Fallback: Check raw repository VERSION file
-                        try
-                        {
-                            string rawUrl = string.Format("https://raw.githubusercontent.com/{0}/main/VERSION", testRepo);
-                            using (WebClient wc = new WebClient())
-                            {
-                                wc.Headers.Add("User-Agent", "AccountLockoutHelper-Updater");
-                                string v = wc.DownloadString(rawUrl);
-                                if (!string.IsNullOrWhiteSpace(v))
-                                {
-                                    foundVer = v.Trim().TrimStart('v', 'V');
-                                    repo = testRepo;
-                                    break;
-                                }
-                            }
-                        }
-                        catch
+                        // 2. Fallback / supplementary: Check raw repository VERSION file
+                        if (string.IsNullOrEmpty(foundVer))
                         {
                             try
                             {
-                                string rawUrlMaster = string.Format("https://raw.githubusercontent.com/{0}/master/VERSION", testRepo);
+                                string rawUrl = string.Format("https://raw.githubusercontent.com/{0}/main/VERSION", testRepo);
                                 using (WebClient wc = new WebClient())
                                 {
                                     wc.Headers.Add("User-Agent", "AccountLockoutHelper-Updater");
-                                    string v = wc.DownloadString(rawUrlMaster);
+                                    string v = wc.DownloadString(rawUrl);
                                     if (!string.IsNullOrWhiteSpace(v))
                                     {
                                         foundVer = v.Trim().TrimStart('v', 'V');
                                         repo = testRepo;
-                                        break;
                                     }
                                 }
                             }
-                            catch { }
+                            catch
+                            {
+                                try
+                                {
+                                    string rawUrlMaster = string.Format("https://raw.githubusercontent.com/{0}/master/VERSION", testRepo);
+                                    using (WebClient wc = new WebClient())
+                                    {
+                                        wc.Headers.Add("User-Agent", "AccountLockoutHelper-Updater");
+                                        string v = wc.DownloadString(rawUrlMaster);
+                                        if (!string.IsNullOrWhiteSpace(v))
+                                        {
+                                            foundVer = v.Trim().TrimStart('v', 'V');
+                                            repo = testRepo;
+                                        }
+                                    }
+                                }
+                                catch { }
+                            }
+                        }
+
+                        // 3. Retrieve changelog notes from CHANGELOG.md if not in release body
+                        if (!string.IsNullOrEmpty(foundVer))
+                        {
+                            if (string.IsNullOrEmpty(releaseNotes))
+                            {
+                                try
+                                {
+                                    string changelogUrl = string.Format("https://raw.githubusercontent.com/{0}/main/CHANGELOG.md", testRepo);
+                                    using (WebClient cwc = new WebClient())
+                                    {
+                                        cwc.Headers.Add("User-Agent", "AccountLockoutHelper-Updater");
+                                        string cl = cwc.DownloadString(changelogUrl);
+                                        if (!string.IsNullOrWhiteSpace(cl))
+                                        {
+                                            Match cm = Regex.Match(cl, @"(##\s*\[" + Regex.Escape(foundVer) + @"\][\s\S]*?)(?=\n##\s*\[|\Z)");
+                                            if (cm.Success) releaseNotes = cm.Groups[1].Value.Trim();
+                                            else releaseNotes = cl.Trim();
+                                        }
+                                    }
+                                }
+                                catch
+                                {
+                                    try
+                                    {
+                                        string changelogUrlMaster = string.Format("https://raw.githubusercontent.com/{0}/master/CHANGELOG.md", testRepo);
+                                        using (WebClient cwc = new WebClient())
+                                        {
+                                            cwc.Headers.Add("User-Agent", "AccountLockoutHelper-Updater");
+                                            string cl = cwc.DownloadString(changelogUrlMaster);
+                                            if (!string.IsNullOrWhiteSpace(cl))
+                                            {
+                                                Match cm = Regex.Match(cl, @"(##\s*\[" + Regex.Escape(foundVer) + @"\][\s\S]*?)(?=\n##\s*\[|\Z)");
+                                                if (cm.Success) releaseNotes = cm.Groups[1].Value.Trim();
+                                                else releaseNotes = cl.Trim();
+                                            }
+                                        }
+                                    }
+                                    catch { }
+                                }
+                            }
+
+                            break;
                         }
                     }
 
@@ -3919,7 +4145,9 @@ namespace DomainLockoutHelper
                     {
                         _remoteVersion = foundVer;
                         _downloadUrl = foundUrl;
+                        _latestChangelog = releaseNotes;
                         _txtRepo.Text = repo;
+                        _btnViewChangelog.Visible = true;
 
                         AppendLog(string.Format("[REPOSITORY] Target: https://github.com/{0}", repo));
                         AppendLog(string.Format("[STATUS] Installed Version: v{0}", _currentVersion));
@@ -3934,14 +4162,19 @@ namespace DomainLockoutHelper
                         {
                             AppendLog("\r\n>>> NEW VERSION AVAILABLE! <<<", Color.FromArgb(22, 163, 74));
                             AppendLog("Click 'Update & Restart' below to pull the latest version and restart the application.");
-                            _btnUpdate.Text = string.Format("Update to v{0} & Restart", foundVer);
+                            _btnUpdate.UseMnemonic = false;
+                            _btnUpdate.Text = "Update & Restart";
                             _btnUpdate.Enabled = true;
+
+                            // Automatically display the changelog modal popup as requested
+                            ShowChangelogPopup();
                         }
                         else
                         {
                             AppendLog("\r\n[UP TO DATE] You are running the latest version of Account Lockout Helper.", Color.FromArgb(22, 163, 74));
-                            AppendLog("You can still click 'Reinstall & Restart' to force re-download and re-compile the latest build.");
-                            _btnUpdate.Text = "Reinstall & Restart";
+                            AppendLog("Click 'Update & Restart' below to re-pull and re-compile the latest build, or click 'View Changelog' to review changes.");
+                            _btnUpdate.UseMnemonic = false;
+                            _btnUpdate.Text = "Update & Restart";
                             _btnUpdate.Enabled = true;
                         }
 

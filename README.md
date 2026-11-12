@@ -65,11 +65,18 @@ A domain-agnostic, zero-installation administrative troubleshooting tool for Ent
   - Saves the last used domain and username for fast switching across app restarts (**passwords are strictly kept in volatile memory only and never saved to disk or registry**).
   - Automatically resets and re-runs the investigation upon connecting, providing full access to all forensic and remediation tools.
 
-- **GitHub In-App Updater & Self-Replacement (v1.2.0):**
+- **GitHub Repository Access & Header Button Grouping (v1.2.0):**
+  - **Grouped Header Actions:** Top header buttons are clearly organized for speed and distinguishability:
+    - `[GitHub]` and `[Update]` together for repository access and version management.
+    - `[Dark Mode]` and `[Switch Domain / Auth]` together for display and credential environment switching.
+    - `[Refresh Forensics (F5)]` isolated in bold blue for primary one-click forensic sweeps.
+  - Dedicated **"GitHub"** button opens the official project repository (`mkstewart88/AD-AccountLockoutHelper`) in the default web browser.
+
+- **GitHub In-App Updater & Interactive Changelog (v1.2.0):**
   - Built-in **"Update"** button in the top-right header automatically contacts GitHub to check for newer versions.
-  - Compares the installed release against GitHub Releases API and raw repository version manifests over TLS 1.2.
-  - When an update is confirmed, it pulls the new release (either precompiled `.exe` or raw source code compiled natively via Windows `csc.exe` in ~2 seconds).
-  - Automatically hot-swaps the running executable in-place and restarts the updated application without requiring manual file replacement.
+  - Compares the installed release against GitHub Releases API and raw repository manifests (`VERSION` / `CHANGELOG.md`) over TLS 1.2.
+  - **Interactive Changelog Modal:** Automatically opens a scrollable popup displaying full release notes and changelog when an update is found, with an "OK" button and support for top-right "X", Enter, or Esc.
+  - **Reliable Self-Replacement Engine:** Clicking "Update & Restart" pulls the latest release (precompiled `.exe` or source code compiled via native `csc.exe` in ~2 seconds), hot-swaps the binary in-place, and restarts the updated executable automatically.
 
 - **Strict Active vs. Historical Separation:**
   - **Currently Locked Out:** Evaluates Active Directory Service Interfaces (`IsAccountLocked`) and domain lockout duration policies to display *only* users who are actively locked out right now.
