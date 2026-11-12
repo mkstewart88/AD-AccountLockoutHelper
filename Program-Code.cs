@@ -305,7 +305,7 @@ namespace DomainLockoutHelper
             _btnGitHub.Text = "GitHub";
             _btnGitHub.Size = new Size(85, 34);
             _btnGitHub.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _btnGitHub.Location = new Point(headerPanel.Width - 700, 16);
+            _btnGitHub.Location = new Point(headerPanel.Width - 761, 16);
             _btnGitHub.BackColor = Color.FromArgb(241, 245, 249);
             _btnGitHub.ForeColor = Color.FromArgb(15, 23, 42);
             _btnGitHub.FlatStyle = FlatStyle.Flat;
@@ -316,10 +316,11 @@ namespace DomainLockoutHelper
             _toolTip.SetToolTip(_btnGitHub, "Open GitHub repository in your default web browser.");
 
             _btnUpdate = new Button();
+            _btnUpdate.UseMnemonic = false;
             _btnUpdate.Text = "Update";
-            _btnUpdate.Size = new Size(90, 34);
+            _btnUpdate.Size = new Size(95, 34);
             _btnUpdate.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _btnUpdate.Location = new Point(headerPanel.Width - 610, 16);
+            _btnUpdate.Location = new Point(headerPanel.Width - 668, 16);
             _btnUpdate.BackColor = Color.FromArgb(241, 245, 249);
             _btnUpdate.ForeColor = Color.FromArgb(15, 23, 42);
             _btnUpdate.FlatStyle = FlatStyle.Flat;
@@ -334,7 +335,7 @@ namespace DomainLockoutHelper
             _btnThemeToggle.Text = "Dark Mode";
             _btnThemeToggle.Size = new Size(110, 34);
             _btnThemeToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _btnThemeToggle.Location = new Point(headerPanel.Width - 495, 16);
+            _btnThemeToggle.Location = new Point(headerPanel.Width - 528, 16);
             _btnThemeToggle.BackColor = Color.FromArgb(241, 245, 249);
             _btnThemeToggle.ForeColor = Color.FromArgb(15, 23, 42);
             _btnThemeToggle.FlatStyle = FlatStyle.Flat;
@@ -346,9 +347,9 @@ namespace DomainLockoutHelper
 
             _btnSwitchDomain = new Button();
             _btnSwitchDomain.Text = "Switch Domain / Auth";
-            _btnSwitchDomain.Size = new Size(160, 34);
+            _btnSwitchDomain.Size = new Size(165, 34);
             _btnSwitchDomain.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _btnSwitchDomain.Location = new Point(headerPanel.Width - 380, 16);
+            _btnSwitchDomain.Location = new Point(headerPanel.Width - 410, 16);
             _btnSwitchDomain.BackColor = Color.FromArgb(241, 245, 249);
             _btnSwitchDomain.ForeColor = Color.FromArgb(15, 23, 42);
             _btnSwitchDomain.FlatStyle = FlatStyle.Flat;
@@ -361,7 +362,7 @@ namespace DomainLockoutHelper
             // Group 3: Primary Standalone Action
             Button btnQuickRefresh = new Button();
             btnQuickRefresh.Text = "Refresh Forensics (F5)";
-            btnQuickRefresh.Size = new Size(180, 34);
+            btnQuickRefresh.Size = new Size(185, 34);
             btnQuickRefresh.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             btnQuickRefresh.Location = new Point(headerPanel.Width - 195, 16);
             btnQuickRefresh.BackColor = Color.FromArgb(37, 99, 235);
@@ -4160,8 +4161,8 @@ namespace DomainLockoutHelper
 
                         if (isNewer)
                         {
-                            AppendLog("\r\n>>> NEW VERSION AVAILABLE! <<<", Color.FromArgb(22, 163, 74));
-                            AppendLog("Click 'Update & Restart' below to pull the latest version and restart the application.");
+                            AppendLog(string.Format("\r\n>>> NEW VERSION AVAILABLE (v{0})! <<<", foundVer), Color.FromArgb(22, 163, 74));
+                            AppendLog("Click 'Update & Restart' below to pull the latest version and restart the application, or click 'View Changelog' to review changes.");
                             _btnUpdate.UseMnemonic = false;
                             _btnUpdate.Text = "Update & Restart";
                             _btnUpdate.Enabled = true;
@@ -4172,16 +4173,10 @@ namespace DomainLockoutHelper
                         else
                         {
                             AppendLog("\r\n[UP TO DATE] You are running the latest version of Account Lockout Helper.", Color.FromArgb(22, 163, 74));
-                            AppendLog("Click 'Update & Restart' below to re-pull and re-compile the latest build, or click 'View Changelog' to review changes.");
+                            AppendLog("Click 'View Changelog' to review changes.");
                             _btnUpdate.UseMnemonic = false;
                             _btnUpdate.Text = "Update & Restart";
-                            _btnUpdate.Enabled = true;
-                        }
-
-                        if (!string.IsNullOrEmpty(releaseNotes))
-                        {
-                            AppendLog("\r\n--- Release Notes ---");
-                            AppendLog(releaseNotes.Trim());
+                            _btnUpdate.Enabled = false; // Disabled when no update is available
                         }
                     }
                     else
