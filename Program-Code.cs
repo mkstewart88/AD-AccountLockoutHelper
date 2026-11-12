@@ -209,7 +209,7 @@ namespace DomainLockoutHelper
         private Button _btnSwitchDomain;
 
         // Application Updater & GitHub Configuration
-        public const string APP_VERSION = "1.2.0";
+        public const string APP_VERSION = "1.2.1";
         private string _savedGitHubRepo = "mkstewart88/AD-AccountLockoutHelper";
         private Button _btnGitHub;
         private Button _btnUpdate;
@@ -262,7 +262,7 @@ namespace DomainLockoutHelper
         private void InitializeComponent()
         {
             _toolTip = new ToolTip();
-            this.Text = "Account Lockout Helper & Root Cause Investigator (v1.2.0)";
+            this.Text = "Account Lockout Helper & Root Cause Investigator (v1.2.1)";
             this.Size = new Size(1680, 960);
             this.MinimumSize = new Size(1280, 760);
             this.WindowState = FormWindowState.Maximized;
@@ -305,7 +305,7 @@ namespace DomainLockoutHelper
             _btnGitHub.Text = "GitHub";
             _btnGitHub.Size = new Size(85, 34);
             _btnGitHub.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _btnGitHub.Location = new Point(headerPanel.Width - 761, 16);
+            _btnGitHub.Location = new Point(headerPanel.Width - 799, 16);
             _btnGitHub.BackColor = Color.FromArgb(241, 245, 249);
             _btnGitHub.ForeColor = Color.FromArgb(15, 23, 42);
             _btnGitHub.FlatStyle = FlatStyle.Flat;
@@ -320,7 +320,7 @@ namespace DomainLockoutHelper
             _btnUpdate.Text = "Update";
             _btnUpdate.Size = new Size(95, 34);
             _btnUpdate.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _btnUpdate.Location = new Point(headerPanel.Width - 668, 16);
+            _btnUpdate.Location = new Point(headerPanel.Width - 702, 16);
             _btnUpdate.BackColor = Color.FromArgb(241, 245, 249);
             _btnUpdate.ForeColor = Color.FromArgb(15, 23, 42);
             _btnUpdate.FlatStyle = FlatStyle.Flat;
@@ -335,7 +335,7 @@ namespace DomainLockoutHelper
             _btnThemeToggle.Text = "Dark Mode";
             _btnThemeToggle.Size = new Size(110, 34);
             _btnThemeToggle.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _btnThemeToggle.Location = new Point(headerPanel.Width - 528, 16);
+            _btnThemeToggle.Location = new Point(headerPanel.Width - 547, 16);
             _btnThemeToggle.BackColor = Color.FromArgb(241, 245, 249);
             _btnThemeToggle.ForeColor = Color.FromArgb(15, 23, 42);
             _btnThemeToggle.FlatStyle = FlatStyle.Flat;
@@ -349,7 +349,7 @@ namespace DomainLockoutHelper
             _btnSwitchDomain.Text = "Switch Domain / Auth";
             _btnSwitchDomain.Size = new Size(165, 34);
             _btnSwitchDomain.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _btnSwitchDomain.Location = new Point(headerPanel.Width - 410, 16);
+            _btnSwitchDomain.Location = new Point(headerPanel.Width - 425, 16);
             _btnSwitchDomain.BackColor = Color.FromArgb(241, 245, 249);
             _btnSwitchDomain.ForeColor = Color.FromArgb(15, 23, 42);
             _btnSwitchDomain.FlatStyle = FlatStyle.Flat;

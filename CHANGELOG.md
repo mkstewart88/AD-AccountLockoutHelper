@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.1] - 2026-11-12
+
+### Changed
+- **Testing Update Functionality:**
+  - Testing update functionality
+  - Increased header button group spacing (60–65px gaps) for maximum visual distinction.
+  - Disabled 'Update & Restart' button when up to date, enabling exclusively upon newer release detection.
+  - Streamlined update log output to maintain clean, action-focused logging without forcing scrollable release notes.
+
+---
+
 ## [1.2.0] - 2026-11-06
 
 ### Added
